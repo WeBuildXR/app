@@ -48,3 +48,12 @@ export function getScene(system: System, scene?: Entity): BABYLON.Scene {
 export function getAssetManager(system: System, scene?: Entity): BABYLON.AssetsManager {
   return getSystem(system, GameSystem).getAssetManager(scene);
 }
+
+/**
+ * Log a message to the screen
+ * @param system A registered ecsy System class
+ * @param scene Scene entity
+ */
+export function logMessage(system: System, message: string) {
+  return getSystem(system, GameSystem).logMessage(message);
+}

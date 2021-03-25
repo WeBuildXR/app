@@ -1,4 +1,5 @@
 import * as BABYLON from "babylonjs";
+import * as BABYLONGUI from "babylonjs-gui";
 import { Entity, System } from "ecsy";
 import { SceneColorProperties } from "../components/types/index";
 import { Scene } from "../components/index";
@@ -48,6 +49,7 @@ export class GameSystem extends System {
       let assetManager = new BABYLON.AssetsManager(scene.object);
       assetManager.useDefaultLoadingScreen = false;
       this._assetManagers.set(scene.object.uid, assetManager);
+      createSkybox(scene.object)
     });
 
     this.queries.scene.changed.forEach((entity: Entity) => {
@@ -126,8 +128,58 @@ export class GameSystem extends System {
     }
   }
 
+  private _messages: BABYLONGUI.Container;
+  /**
+   * Log a message to the screen
+   * @param message text to display in a stack panel
+   */
+  public logMessage(message: string) {
+    console.log('log', message)
+    if (!this._messages) {
+      this._messages = createTextPanel();
+    }
+    this._messages.addControl(createTextBlock(message));
+  }
+
   private _render() {
     getWorld(this).execute(this._engine.getDeltaTime(), performance.now());
     getWorld(this).enabled && this._activeScene.render();
   }
+}
+
+function createTextPanel() {
+  var advancedTexture = BABYLONGUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+  var grid = new BABYLONGUI.Grid();
+  grid.addColumnDefinition(1 / 3);
+  grid.addColumnDefinition(1 / 3);
+  grid.addColumnDefinition(1 / 3);
+  advancedTexture.addControl(grid);
+
+  var stack = new BABYLONGUI.StackPanel();
+  stack.verticalAlignment = BABYLONGUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+  grid.addControl(stack, 0, 2);
+
+  return stack;
+}
+
+function createTextBlock(text: string, color: string = "red") {
+  var textBlock = new BABYLONGUI.TextBlock();
+  textBlock.text = text;
+  textBlock.color = color;
+  textBlock.fontSize = 12;
+  textBlock.textHorizontalAlignment = BABYLONGUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+  textBlock.height = "15px";
+  return textBlock;
+}
+
+function createSkybox(scene: BABYLON.Scene) {
+  var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, scene);
+  var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+  skyboxMaterial.backFaceCulling = false;
+  skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("textures/skybox", scene);
+  skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+  skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+  skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+  skybox.material = skyboxMaterial;
 }

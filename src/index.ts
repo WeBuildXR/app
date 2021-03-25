@@ -1,14 +1,19 @@
 import { Game } from "./core/Game";
 import { MeshSystem, LightSystem, MaterialSystem, InputSystem, Camera, Mesh, MeshTypes, Material, Transform, Light, Input, XYZProperties } from "./ecsy-babylon";
+import { ControllerInput } from "./webuild-xr/components/ControllerInput";
+import { ControllerInputSystem } from "./webuild-xr/systems/ControllerInputSystem";
 
 // start app by call game instance
 const game = Game.instance();
 
 // init game canvas, add systems, add scene T
-game.start(document.getElementById("mainCanvas") as HTMLCanvasElement, [MeshSystem, LightSystem, MaterialSystem, InputSystem])
+game.start(document.getElementById("mainCanvas") as HTMLCanvasElement, [MeshSystem, LightSystem, MaterialSystem, InputSystem, ControllerInputSystem])
 
 // add sceneZ
-const sceneZ = game.createScene({ clear: "#4DD0D5D9" });
+const sceneZ = game.createScene({
+  ambient: "#CCCCCC",
+  clear: "#CCCCCCFF"
+});
 
 // create camera of scene Z
 const cameraZ = game.createEntity().addComponent(Camera, { scene: sceneZ, pointerLock: false });
@@ -42,5 +47,62 @@ const ground = game.createEntity()
     }
   });
 
-declare global { interface Window { game: Game; } }
-window.game = game;
+game.createEntity()
+  .addComponent(Input, {
+    onKey: (key: string, down: boolean, up: boolean) => {
+      if (key == "d") {
+        game.showDebugger()
+      } else if (key == "b") {
+        createRandomBox()
+      }
+    }
+  })
+
+game.createEntity()
+  .addComponent(ControllerInput, {
+    onLeftThumbstickMove: () => {
+    },
+    onRightThumbstickMove: () => {
+    },
+    onLeftButtonPress: () => {
+      createRandomBox()
+    },
+    onLeftTriggerPress: (mesh: BABYLON.AbstractMesh) => {
+      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
+      createRandomBox()
+    },
+    onLeftSqueezePress: (mesh: BABYLON.AbstractMesh) => {
+      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
+      createRandomBox()
+    },
+    onRightButtonPress: () => {
+      createRandomBox()
+    },
+    onRightTriggerPress: (mesh: BABYLON.AbstractMesh) => {
+      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
+      createRandomBox()
+    },
+    onRightSqueezePress: (mesh: BABYLON.AbstractMesh) => {
+      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
+      createRandomBox()
+    }
+  })
+
+function createRandomBox() {
+  const boxR = game.createEntity()
+    .addComponent(Mesh, { scene: sceneZ })
+    .addComponent(Material, { scene: sceneZ, color: { diffuse: randomColor() } });
+  boxR.getMutableComponent(Transform).position.y = Math.round(Math.random() * 10);
+  boxR.getMutableComponent(Transform).position.z = Math.round(Math.random() * 10);
+  boxR.getMutableComponent(Transform).position.x = Math.round(Math.random() * 10);
+}
+
+const randomColor = () => {
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    const random = Math.random();
+    const bit = (random * 16) | 0;
+    color += (bit).toString(16);
+  };
+  return color;
+};
