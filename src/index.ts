@@ -60,41 +60,82 @@ game.createEntity()
 
 game.createEntity()
   .addComponent(ControllerInput, {
-    onLeftThumbstickMove: () => {
+    onLeftThumbstickMove: (x, y) => {
     },
-    onRightThumbstickMove: () => {
+    onRightThumbstickMove: (x, y) => {
     },
     onLeftButtonPress: () => {
       createRandomBox()
     },
     onLeftTriggerPress: (mesh: BABYLON.AbstractMesh) => {
-      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
-      createRandomBox()
+      if (mesh) {
+        let { x, y, z } = mesh.position
+        while (getBlock(x, y, z)) {
+          y += 1
+        }
+        const block = createBlock(x, y, z, randomColor())
+        setBlock(x, y, z, block)
+      }
     },
     onLeftSqueezePress: (mesh: BABYLON.AbstractMesh) => {
-      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
-      createRandomBox()
+      if (mesh) {
+        let { x, y, z } = mesh.position
+        while (getBlock(x, y, z)) {
+          y -= 1
+        }
+        const block = createBlock(x, y, z, randomColor())
+        setBlock(x, y, z, block)
+      }
     },
     onRightButtonPress: () => {
       createRandomBox()
     },
     onRightTriggerPress: (mesh: BABYLON.AbstractMesh) => {
-      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
-      createRandomBox()
+      if (mesh) {
+        let { x, y, z } = mesh.position
+        while (getBlock(x, y, z)) {
+          z -= 1
+        }
+        const block = createBlock(x, y, z, randomColor())
+        setBlock(x, y, z, block)
+      }
     },
     onRightSqueezePress: (mesh: BABYLON.AbstractMesh) => {
-      mesh.material.alpha = mesh.material.alpha < 1 ? .9 : .3
-      createRandomBox()
+      if (mesh) {
+        let { x, y, z } = mesh.position
+        while (getBlock(x, y, z)) {
+          x -= 1
+        }
+        const block = createBlock(x, y, z, randomColor())
+        setBlock(x, y, z, block)
+      }
     }
   })
 
 function createRandomBox() {
-  const boxR = game.createEntity()
+  createBlock(Math.round(Math.random() * 10), Math.round(Math.random() * 10), Math.round(Math.random() * 10), randomColor())
+}
+
+let blocks = { '1-1-1': true }
+function getBlock(x, y, z): Mesh {
+  const key = `${x}-${y}-${z}`
+  return blocks[key]
+}
+
+function setBlock(x, y, z, b) {
+  const key = `${x}-${y}-${z}`
+  blocks[key] = b
+}
+
+function createBlock(x, y, z, color) {
+  const block = game.createEntity()
     .addComponent(Mesh, { scene: sceneZ })
-    .addComponent(Material, { scene: sceneZ, color: { diffuse: randomColor() } });
-  boxR.getMutableComponent(Transform).position.y = Math.round(Math.random() * 10);
-  boxR.getMutableComponent(Transform).position.z = Math.round(Math.random() * 10);
-  boxR.getMutableComponent(Transform).position.x = Math.round(Math.random() * 10);
+    .addComponent(Material, { scene: sceneZ, color: { diffuse: color } });
+  const transform = block.getMutableComponent(Transform)
+  transform.position.y = y;
+  transform.position.z = z;
+  transform.position.x = x;
+  return block.getComponent(Mesh)
 }
 
 const randomColor = () => {
