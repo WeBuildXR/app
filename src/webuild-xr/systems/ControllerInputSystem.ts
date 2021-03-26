@@ -20,11 +20,21 @@ export class ControllerInputSystem extends System {
       let input = entity.getComponent(ControllerInput);
       let scene = getScene(this, input.scene);
       this.createXRHelper(input, scene);
+      //let pickPosition: BABYLON.Vector3
+      //pick.pickedMesh.getFacetPositionToRef(facet, pickPosition);
+      if (input.onPointerInput) {
+        scene.onPointerPick = (pointer, pick) => {
+          if (pick.hit && pick.pickedMesh) {
+            const facet = (2 * Math.floor(pick.faceId / 2))
+            input.onPointerInput(pick.pickedMesh, facet)
+          }
+        }
+      }
     });
 
     this.queries.input.removed.forEach((entity: Entity) => {
-      let input = entity.getComponent(ControllerInput);
-      let scene = getScene(this, input.scene);
+      //let input = entity.getComponent(ControllerInput);
+      //let scene = getScene(this, input.scene);
       if (this._xrHelper) {
         this._xrHelper.dispose();
       }
@@ -36,7 +46,10 @@ export class ControllerInputSystem extends System {
       this._xrHelper = await scene.createDefaultXRExperienceAsync(input.xrOptions || {
         disableTeleportation: false
       })
-      logMessage(this, 'xrHelper created')
+      this._xrHelper.teleportation.parabolicRayEnabled = true
+      if (input.floor) {
+        this._xrHelper.teleportation.addFloorMesh(input.floor);
+      }
       this._xrHelper.input.onControllerAddedObservable.add((inputSource) => {
         inputSource.onMotionControllerInitObservable.add((controller) => {
           //https://doc.babylonjs.com/divingDeeper/webXR/webXRInputControllerSupport#some-terms-and-classes-to-clear-things-up

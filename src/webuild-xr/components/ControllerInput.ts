@@ -14,6 +14,11 @@ import { SceneComponent } from "../../ecsy-babylon/components/types/SceneCompone
 export class ControllerInput implements SceneComponent {
   scene?: Entity;
   /** 
+   * The floor for teleportation
+   * @memberof XR
+   */
+  floor?: BABYLON.AbstractMesh;
+  /** 
    * When left thumbstick is moved. 
    * @memberof XR
    */
@@ -76,6 +81,6 @@ namespace ControllerInput {
     (mesh: BABYLON.AbstractMesh): void;
   }
   export interface XRPointerInput {
-    (): void;
+    (mesh: BABYLON.AbstractMesh, facet: number): void;
   }
 }
