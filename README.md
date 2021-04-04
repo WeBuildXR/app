@@ -6,20 +6,19 @@ This Repository contains the WeBuildXR application.
 
 Run the following commands from within the repository's root folder to setup the application:
 
-1. `npm install`
-2. `npm install webpack-dev-server`
+`npm install`
 
 ## Running
 
-Run the following commands from within the repository's root folder to run the project using `webpack-dev-server`:
+Run the following commands from within the repository's root folder to run the project using `npx webpack`:
 
-1. `npm start`
+`npm start`
 
 ## Build
 
-Run the following commands from within the repository's root folder to build the project using `webpack`:
+Run the following commands from within the repository's root folder to build the project using `npx webpack`:
 
-1. `npm run build`
+`npm run-script build`
 
 ## Structure
 

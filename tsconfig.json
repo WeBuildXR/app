@@ -1,10 +1,18 @@
 {
-    "compilerOptions": {
-        "target": "es6",
-        "module": "commonjs",
-        "moduleResolution": "node"
-    },
-    "include": [
-        "src/**/*"
-    ]
+	"compilerOptions": {
+        "module": "esNext",
+		"target": "ES6",
+		"moduleResolution": "node",
+		"strict": true,
+		"noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictPropertyInitialization": false,
+        "skipLibCheck": true,
+		"preserveConstEnums":true,
+        "sourceMap": true,
+        "rootDir": "src"
+	}
 }
