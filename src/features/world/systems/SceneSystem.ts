@@ -1,7 +1,7 @@
 import { Engine as BabylonEngine } from "@babylonjs/core/Engines/engine"
 import { EngineOptions as BabylonEngineOptions } from "@babylonjs/core/Engines/thinEngine"
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight"
-import { Vector3 as BabylonVector3 } from "@babylonjs/core/Maths/math"
+import { Matrix, Vector3 as BabylonVector3 } from "@babylonjs/core/Maths/math"
 import { AssetsManager as BabylonAssetsManager } from "@babylonjs/core/Misc/assetsManager"
 import { Observable } from "@babylonjs/core/Misc/observable"
 import { Scene as BabylonScene } from "@babylonjs/core/scene"
@@ -9,6 +9,8 @@ import { Entity as EcsyEntity, System as EcsySystem } from "ecsy"
 import { disposeComponent } from "../common/babylonUtils"
 import { BabylonComponent } from "../components/BabylonComponent"
 import { Scene } from "../components/Scene"
+import { DebugLayer } from "@babylonjs/core/Debug"
+import "@babylonjs/inspector"
 
 export class SceneSystem extends EcsySystem {
 
@@ -18,6 +20,13 @@ export class SceneSystem extends EcsySystem {
   }
   /** @hidden */
   queries: any
+
+  public getPickedPoint() {
+    const scene = this.activeScene
+    const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), null)
+    const hit = scene.pickWithRay(ray)
+    return hit?.pickedPoint
+  }
 
   private _engine: BabylonEngine
   get renderingCanvas() { return this._engine.getRenderingCanvas() }

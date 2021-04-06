@@ -12,6 +12,9 @@ module.exports = {
         filename: "js/babylonBundle.js",
         path: path.resolve("./dist/"),
     },
+    externals: {
+        "simple-peer": "SimplePeer",
+    },
     resolve: {
         extensions: [".ts", ".js"],
         fallback: {

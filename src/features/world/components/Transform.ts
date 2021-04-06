@@ -1,4 +1,4 @@
-import { Component as EcsyComponent } from "ecsy";
+import { Component as EcsyComponent, Types as EcsyTypes } from "ecsy";
 
 export interface TransformProperties {
     x: number
@@ -25,4 +25,10 @@ export class Transform extends EcsyComponent<Transform> {
     rotation: TransformProperties = DefaultTransformProperties();
     /** @default 1,1,1 */
     scale: TransformProperties = ScaleTransformProperties();
+}
+
+Transform.schema = {
+    position: { type: EcsyTypes.Ref },
+    rotation: { type: EcsyTypes.Ref },
+    scale: { type: EcsyTypes.Ref }
 }

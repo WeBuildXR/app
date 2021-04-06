@@ -14,7 +14,7 @@ interface movable {
 }
 
 export function disposeComponent(component: BabylonComponent<disposable>): void {
-    component.babylonComponent && component.babylonComponent.dispose()
+    component && component.babylonComponent && component.babylonComponent.dispose()
 }
 
 export function hexToColor3(hexString: string): BabylonColor3 {
@@ -32,20 +32,34 @@ export function updateTransform(entity: EcsyEntity, component: BabylonComponent<
 export function updateComponentTransform(transform: Transform, component: BabylonComponent<movable>): void {
     let babylonComponent = component.babylonComponent
     if (babylonComponent) {
-        babylonComponent.position = createVector3(transform.position)
-        babylonComponent.rotation = createVector3Radians(transform.rotation)
-        babylonComponent.scaling = createVector3(transform.scale)
+        babylonComponent.position = applyVector3(babylonComponent.position, transform.position)
+        babylonComponent.rotation = applyVector3Radians(babylonComponent.rotation, transform.rotation)
+        babylonComponent.scaling = applyVector3(babylonComponent.scaling, transform.scale)
     }
 }
 
-function createVector3({ x, y, z }: TransformProperties): BabylonVector3 {
-    return new BabylonVector3(x, y, z)
+function applyVector3(vector: BabylonVector3, { x, y, z }: TransformProperties): BabylonVector3 {
+    if (vector) {
+        vector.x = x
+        vector.y = y
+        vector.z = z
+        return vector
+    } else {
+        return new BabylonVector3(x, y, z)
+    }
 }
 
-function createVector3Radians({ x, y, z }: TransformProperties): BabylonVector3 {
-    return new BabylonVector3(degreeToRadians(x), degreeToRadians(y), degreeToRadians(z))
+function applyVector3Radians(vector: BabylonVector3, { x, y, z }: TransformProperties): BabylonVector3 {
+    if (vector) {
+        vector.x = degreeToRadians(x)
+        vector.y = degreeToRadians(y)
+        vector.z = degreeToRadians(z)
+        return vector
+    } else {
+        return new BabylonVector3(degreeToRadians(x), degreeToRadians(y), degreeToRadians(z))
+    }
 }
 
-function degreeToRadians(degree: number): number {
+export function degreeToRadians(degree: number): number {
     return BabylonAngle.FromDegrees(degree).radians()
 }

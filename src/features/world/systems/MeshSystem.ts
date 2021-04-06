@@ -1,6 +1,8 @@
 import { SceneLoader as BabylonSceneLoader } from "@babylonjs/core/Loading/sceneLoader"
 import { StandardMaterial as BabylonStandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
+import { CubeTexture as BabylonCubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture"
 import { Texture as BabylonTexture } from "@babylonjs/core/Materials/Textures/texture"
+import { Color3 as BabylonColor3 } from "@babylonjs/core/Maths/math"
 import { AbstractMesh as BabylonMesh } from "@babylonjs/core/Meshes/abstractMesh"
 import { MeshBuilder as BabylonMeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { AssetsManager as BabylonAssetsManager } from "@babylonjs/core/Misc/assetsManager"
@@ -15,12 +17,12 @@ import { SceneSystem } from "./SceneSystem"
 export class MeshSystem extends System {
     /** @hidden */
     static queries = {
-        meshes: { components: [Mesh, Transform], listen: { added: true, removed: true } },
+        meshes: { components: [Mesh], listen: { added: true, removed: true } },
     }
 
     /** @hidden */
     queries: any
-    
+
     private materialCache: { [id: string]: BabylonStandardMaterial } = {}
 
     /** @hidden */
@@ -30,11 +32,16 @@ export class MeshSystem extends System {
             const sceneSystem = this.world.getSystem(SceneSystem)
             const assetManager = sceneSystem.getAssetManager()
             await this.createMesh(mesh, sceneSystem.activeScene, assetManager)
+            //mesh.babylonComponent.onAfterWorldMatrixUpdateObservable.add((eventData)=>{
+            //    //console.log('onAfterWorldMatrixUpdateObservable', eventData.position)
+            //    const transform = entity.getMutableComponent(Transform)!
+            //    transform.position = eventData.position
+            //})
             updateTransform(entity, mesh)
         })
 
         this.queries.meshes.removed.forEach((entity: Entity) => {
-            const mesh = entity.getComponent(Mesh)! as BabylonComponent<BabylonMesh>
+            const mesh = entity.getRemovedComponent(Mesh) as BabylonComponent<BabylonMesh>
             disposeComponent(mesh)
         })
     }
@@ -45,13 +52,22 @@ export class MeshSystem extends System {
             mesh.babylonComponent = BabylonMeshBuilder.CreateBox("", options, scene)
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Ground) {
-            mesh.babylonComponent = BabylonMeshBuilder.CreateGround("", options, scene)
+            mesh.babylonComponent = BabylonMeshBuilder.CreateGround("Ground", options, scene)
             await this.applyMaterial(mesh, scene, assetManager)
+        } else if (mesh.type == MeshTypes.Sky) {
+            mesh.babylonComponent = BabylonMeshBuilder.CreateBox("Sky", options, scene)
+            var skyboxMaterial = new BabylonStandardMaterial("skyBox", scene)
+            skyboxMaterial.backFaceCulling = false
+            skyboxMaterial.reflectionTexture = new BabylonCubeTexture(mesh.url!, scene)
+            skyboxMaterial.reflectionTexture.coordinatesMode = BabylonTexture.SKYBOX_MODE
+            skyboxMaterial.diffuseColor = new BabylonColor3(0, 0, 0)
+            skyboxMaterial.specularColor = new BabylonColor3(0, 0, 0)
+            mesh.babylonComponent.material = skyboxMaterial
         } else if (mesh.type == MeshTypes.Plane) {
             mesh.babylonComponent = BabylonMeshBuilder.CreatePlane("", options, scene)
             await this.applyMaterial(mesh, scene, assetManager)
-        } else if (mesh.type == MeshTypes.Url) {
-            mesh.babylonComponent = await this.loadMesh(options.url!, assetManager)
+        } else if (mesh.type == MeshTypes.Model) {
+            mesh.babylonComponent = await this.loadMesh(mesh.url!, assetManager)
         } else {
             throw new Error(`Unsupported mesh type: ${mesh.type}`)
         }
@@ -127,11 +143,11 @@ export class MeshSystem extends System {
         return new Promise((resolve, reject) => {
             const ext = url.substring(url.lastIndexOf("."), url.length)
             if (BabylonSceneLoader.IsPluginForExtensionAvailable(ext)) {
-                const sceneSystem = this.world.getSystem(SceneSystem)
-                const assetManager = sceneSystem.getAssetManager()
                 const fileNameIndex = url.lastIndexOf("/") + 1
-                const task = assetManager.addMeshTask(`loadMesh_${Date()}`, "", url.substring(0, fileNameIndex), url.substring(fileNameIndex, url.length))
+                const fileName = url.substring(fileNameIndex, url.length)
+                const task = assetManager.addMeshTask(`loadMesh_${Date()}`, "", url.substring(0, fileNameIndex), fileName)
                 task.onSuccess = ({ loadedMeshes }) => {
+                    loadedMeshes[0].name = fileName.replace(ext, '')
                     resolve(loadedMeshes[0])
                 }
                 task.onError = (_, message) => {

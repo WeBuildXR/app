@@ -1,3 +1,4 @@
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { AbstractMesh as BabylonMesh } from "@babylonjs/core/Meshes/abstractMesh"
 import { Component as EcsyComponent, Types as EcsyTypes } from "ecsy";
 import { BabylonComponent } from "./BabylonComponent"
@@ -6,19 +7,22 @@ export enum MeshTypes {
     Box = "Box",
     Plane = "Plane",
     Ground = "Ground",
-    Url = "Url"
+    Sky = "Sky",
+    Model = "Model"
 }
 
 export class Mesh extends EcsyComponent<Mesh> implements BabylonComponent<BabylonMesh> {
     babylonComponent: BabylonMesh
     /** @default "Box" */
     type?: MeshTypes = MeshTypes.Box
+    url?: string
     options?: MeshOptions
     material?: Material
 }
 
 Mesh.schema = {
     type: { type: EcsyTypes.String },
+    url: { type: EcsyTypes.String },
     options: { type: EcsyTypes.Ref },
     material: { type: EcsyTypes.Ref }
 }
@@ -48,8 +52,10 @@ export interface MeshOptions {
     wrap?: boolean
     /** @memberof Ground */
     subdivisions?: number
-    /** @memberof Url */
-    url?: string
+    /** @memberof Mesh */
+    opacity?: number
+    /** @memberof Mesh */
+    outlineColor?: Color3
 }
 
 /** Interface defined color properties of a Mesh material */
