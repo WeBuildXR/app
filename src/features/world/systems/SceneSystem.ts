@@ -11,6 +11,7 @@ import { BabylonComponent } from "../components/BabylonComponent"
 import { Scene } from "../components/Scene"
 import { DebugLayer } from "@babylonjs/core/Debug"
 import "@babylonjs/inspector"
+import { GlowLayer } from "@babylonjs/core/Layers/glowLayer"
 
 export class SceneSystem extends EcsySystem {
 
@@ -55,6 +56,11 @@ export class SceneSystem extends EcsySystem {
       this._engine.scenes.length === 1 && (this._activeScene = scene.babylonComponent)
 
       new HemisphericLight("", new BabylonVector3(0, 1, 0), this._activeScene)
+
+      var gl = new GlowLayer("glow", scene.babylonComponent, {
+        mainTextureSamples: 4,
+        blurKernelSize: 15
+      })
 
       let assetManager = new BabylonAssetsManager(scene.babylonComponent)
       assetManager.useDefaultLoadingScreen = false

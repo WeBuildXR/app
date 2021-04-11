@@ -2,11 +2,9 @@ import { Camera } from "./features/world/components/Camera";
 import { Mesh, MeshTypes } from "./features/world/components/Mesh";
 import { Transform } from "./features/world/components/Transform";
 import { world } from "./features/world/world";
-import blockTextureUrl from "../assets/textures/block.png"
-import grassTextureUrl from "../assets/textures/grass.jpg";
-import previewTextureUrl from "../assets/textures/block1.jpg";
 import removeIconUrl from "../assets/textures/remove-icon.png";
 import playerModelUrl from "../assets/models/webuild-player.glb";
+import ChatBubbleUrl from "../assets/models/ChatBubble.glb";
 import controllerModelUrl from "../assets/models/webuild-controller-small.glb";
 import { InputSystem } from "./features/controls/systems/InputSystem";
 import { ControllerInput } from "./features/controls/components/ControllerInput";
@@ -24,13 +22,37 @@ import { Menu } from "./features/menu/components/Menu";
 import { Entity } from "ecsy";
 import { ShareSettings } from "./features/collaboration/components/ShareSettings";
 import { ShareSystem } from "./features/collaboration/systems/ShareSystem";
+import { Color3 } from "@babylonjs/core";
 
+const models = [
+  {
+    width: 12,
+    height: 25,
+    depth: 30,
+    url: "./models/building.glb",
+    preview: "./models/preview/building.png"
+  },
+  {
+    width: 20,
+    height: 20,
+    depth: 10,
+    url: "./models/house.glb",
+    preview: "./models/preview/house.png"
+  },
+  {
+    width: 16,
+    height: 16,
+    depth: 15,
+    url: "./models/untitled.glb",
+    preview: "./models/preview/untitled.png"
+  } ]
 const textures = ["Wood_5.png", "block.jpg", "brick.jpg", "colors.png", "crate.png", "cube1.jpg", "cube2.jpg", "cube3.jpg", "cube4.jpg", "cube5.jpg", "Earth 1.png", "Earth 2.png", "Earth 3.png", "Floor_1.png", "Floor_2.png", "grass.jpg", "Grass_1.png", "Grass_2.png", "Grass_3.png", "Ground_1.png", "Ground_2.png", "Ground_3.png", "Ground_4.png", "Ground_5.png", "Ice.png", "Lava.png", "Metal wall.png", "Rock 1.png", "Rock 2.png", "Roof_1.png", "Roof_2.png", "Soil.png", "TreeBark.png", "vol_2_2_Base_Color.png", "vol_2_2_Height.png", "Vol_39_7_Height.png", "Vol_39_7_Roughness.png", "Wall 1.png", "Wall 2.png", "Wall_1.png", "Wall_2.png", "Wall_3.png", "Wood_1.png", "Wood_2.png", "Wood_3.png", "Wood_4.png"]
 
 const settings = {
-  width: 50,
-  height: 50,
-  selectedTexture: "block.jpg"
+  width: 150,
+  height: 150,
+  depth: 100,
+  selectedTexture: "Wood_5.jpg"
 }
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
@@ -57,7 +79,10 @@ const ground = game.createEntity()
     },
     material: {
       texture: {
-        diffuse: { url: grassTextureUrl, uScale: settings.width, vScale: settings.height }
+        diffuse: { url: "./textures/wire-box.png", uScale: settings.width, vScale: settings.height },
+      },
+      color: {
+        diffuse: Color3.Random().toHexString()
       }
     }
   })
@@ -184,10 +209,20 @@ function toggleSelectedBlock() {
 }
 
 function addBlock(x: number, y: number, z: number, facetAddDirection: number) {
-  game.createEntity().addComponent(AddBlock, {
-    x, y, z, facetAddDirection,
-    textureUrl: `./textures/all/${settings.selectedTexture}`
-  })
+  if (settings.selectedTexture.indexOf(".glb") > -1) {
+    game.createEntity().addComponent(AddBlock, {
+      x, y, z, facetAddDirection,
+      width: settings.width,
+      height: settings.height,
+      depth: settings.depth,
+      modelUrl: settings.selectedTexture
+    })
+  } else {
+    game.createEntity().addComponent(AddBlock, {
+      x, y, z, facetAddDirection,
+      textureUrl: `./textures/all/${settings.selectedTexture}`
+    })
+  }
 }
 
 function addBlockMenu(entity: Entity) {
@@ -206,10 +241,18 @@ function addBlockMenu(entity: Entity) {
 
 function createTextureMenu(entity: Entity) {
   entity.addComponent(Menu, {
-    items: textures.map(t => ({
+    items: models.map(({width,height,depth,url,preview}) => ({
+      imageUrl: preview,
+      action: () => {
+        settings.width = width
+        settings.height = height
+        settings.depth = depth
+        settings.selectedTexture = url
+      }
+    })).concat(textures.map(t => ({
       imageUrl: `./textures/all/${t}`,
       action: () => settings.selectedTexture = t
-    }))
+    })))
   })
 }
 

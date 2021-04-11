@@ -246,27 +246,29 @@ export class VoxelSystem extends EcsySystem {
 
     private addNewBlock(x: number, y: number, z: number, facet: number) {
         let { voxelX, voxelY, voxelZ } = this.normalizeCoordinates(x, y, z)
-        while (this.getBlock(voxelX, voxelY, voxelZ)) {
+        let existing = this.getBlock(voxelX, voxelY, voxelZ)
+        while (existing) {
             switch (facet) {
                 case 0:
-                    voxelZ += 1
+                    voxelZ += existing.voxelHeight || 1
                     break;
                 case 2:
-                    voxelZ -= 1
+                    voxelZ -= existing.voxelHeight || 1
                     break;
                 case 4:
-                    voxelX += 1
+                    voxelX += existing.voxelWidth || 1
                     break;
                 case 6:
-                    voxelX -= 1
+                    voxelX -= existing.voxelWidth || 1
                     break;
                 case 8:
-                    voxelY += 1
+                    voxelY += existing.voxelDepth || 1
                     break;
                 case 10:
-                    voxelY -= 1
+                    voxelY -= existing.voxelDepth || 1
                     break;
             }
+            existing = this.getBlock(voxelX, voxelY, voxelZ)
         }
         return this.clipBlockPosition(voxelX, voxelY, voxelZ)
     }

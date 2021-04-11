@@ -68,6 +68,7 @@ export class MeshSystem extends System {
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Model) {
             mesh.babylonComponent = await this.loadMesh(mesh.url!, assetManager)
+            await this.applyMaterial(mesh, scene, assetManager)
         } else {
             throw new Error(`Unsupported mesh type: ${mesh.type}`)
         }
