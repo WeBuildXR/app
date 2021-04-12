@@ -1,3 +1,5 @@
+import { ActionManager } from "@babylonjs/core/Actions/actionManager"
+import { ExecuteCodeAction } from "@babylonjs/core/Actions/directActions"
 import { SceneLoader as BabylonSceneLoader } from "@babylonjs/core/Loading/sceneLoader"
 import { StandardMaterial as BabylonStandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { CubeTexture as BabylonCubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture"
@@ -7,6 +9,10 @@ import { AbstractMesh as BabylonMesh } from "@babylonjs/core/Meshes/abstractMesh
 import { MeshBuilder as BabylonMeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { AssetsManager as BabylonAssetsManager } from "@babylonjs/core/Misc/assetsManager"
 import { Scene as BabylonScene } from "@babylonjs/core/scene"
+import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture"
+import { Control } from "@babylonjs/gui/2D/controls/control"
+import { Rectangle } from "@babylonjs/gui/2D/controls/rectangle"
+import { TextBlock } from "@babylonjs/gui/2D/controls/textBlock"
 import { Entity, System } from "ecsy"
 import { disposeComponent, hexToColor3, updateTransform } from "../common/babylonUtils"
 import { BabylonComponent } from "../components/BabylonComponent"
@@ -36,7 +42,7 @@ export class MeshSystem extends System {
             //    //console.log('onAfterWorldMatrixUpdateObservable', eventData.position)
             //    const transform = entity.getMutableComponent(Transform)!
             //    transform.position = eventData.position
-            //})
+            //})d
             updateTransform(entity, mesh)
         })
 
@@ -50,9 +56,11 @@ export class MeshSystem extends System {
         const options = mesh.options || {}
         if (mesh.type == MeshTypes.Box) {
             mesh.babylonComponent = BabylonMeshBuilder.CreateBox("", options, scene)
+            mesh.babylonComponent.checkCollisions = true
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Ground) {
             mesh.babylonComponent = BabylonMeshBuilder.CreateGround("Ground", options, scene)
+            mesh.babylonComponent.checkCollisions = true
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Sky) {
             mesh.babylonComponent = BabylonMeshBuilder.CreateBox("Sky", options, scene)
@@ -65,9 +73,11 @@ export class MeshSystem extends System {
             mesh.babylonComponent.material = skyboxMaterial
         } else if (mesh.type == MeshTypes.Plane) {
             mesh.babylonComponent = BabylonMeshBuilder.CreatePlane("", options, scene)
+            mesh.babylonComponent.checkCollisions = true
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Model) {
             mesh.babylonComponent = await this.loadMesh(mesh.url!, assetManager)
+            mesh.babylonComponent.checkCollisions = true
             await this.applyMaterial(mesh, scene, assetManager)
         } else {
             throw new Error(`Unsupported mesh type: ${mesh.type}`)
@@ -140,6 +150,8 @@ export class MeshSystem extends System {
         }
     }
 
+    static meshData: any[] = []
+
     private async loadMesh(url: string, assetManager: BabylonAssetsManager): Promise<BabylonMesh> {
         return new Promise((resolve, reject) => {
             const ext = url.substring(url.lastIndexOf("."), url.length)
@@ -148,7 +160,10 @@ export class MeshSystem extends System {
                 const fileName = url.substring(fileNameIndex, url.length)
                 const task = assetManager.addMeshTask(`loadMesh_${Date()}`, "", url.substring(0, fileNameIndex), fileName)
                 task.onSuccess = ({ loadedMeshes }) => {
-                    loadedMeshes[0].name = fileName.replace(ext, '')
+                    loadedMeshes[0].name = fileName.replace(ext, "")
+                    loadedMeshes[0].position.setAll(0)
+                    loadedMeshes[0].rotation.setAll(0)
+                    loadedMeshes[0].scaling.setAll(1)
                     resolve(loadedMeshes[0])
                 }
                 task.onError = (_, message) => {

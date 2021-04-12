@@ -4,6 +4,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode"
 import { Container3D } from "@babylonjs/gui/3D/controls/container3D"
 import { HolographicButton } from "@babylonjs/gui/3D/controls/holographicButton"
+import { MeshButton3D } from "@babylonjs/gui/3D/controls/meshButton3D"
 import { PlanePanel } from "@babylonjs/gui/3D/controls/planePanel"
 import { GUI3DManager } from "@babylonjs/gui/3D/gui3DManager"
 import { degreeToRadians } from "../features/world/common/babylonUtils"
@@ -57,10 +58,15 @@ export class MenuBehavior implements Behavior<Mesh> {
                     button.text = text
                 }
                 if (imageUrl) {
-                    button.imageUrl = imageUrl
+                    if(imageUrl.indexOf(".glb")>-1){
+                        button.imageUrl = "./textures/wire-box.png"
+                    }else{
+                        button.imageUrl = imageUrl
+                    }
                 }
                 button.onPointerClickObservable.add(action)
                 toolbar.addControl(button)
+                button.content
             }
             toolbar.blockLayout = false;
 

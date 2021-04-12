@@ -35,6 +35,9 @@ export class InputSystem extends EcsySystem implements WorldScene {
         if (this.xrHelper) {
             this.xrHelper.baseExperience.camera.position.x = position.x
             this.xrHelper.baseExperience.camera.position.z = position.z
+        }else{
+            this.getBabylonScene().cameras[0].position.x = position.x
+            this.getBabylonScene().cameras[0].position.z = position.z
         }
     }
 

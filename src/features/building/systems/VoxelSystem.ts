@@ -104,7 +104,7 @@ export class VoxelSystem extends EcsySystem {
         this.queries.create.added.forEach((entity: EcsyEntity) => {
             this.clearSelection()
             const add = entity.getComponent(AddBlock)!
-            const transform = entity.getComponent(Transform)!
+            const transform = entity.getMutableComponent(Transform)!
             let { x, y, z } = add
             const block = this.addNewBlock(x, y, z, add.facetAddDirection!)
             if (block) {
