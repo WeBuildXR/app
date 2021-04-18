@@ -8,6 +8,7 @@
         "@babylonjs/gui": "5.0.0-alpha.16",
         "@babylonjs/inspector": "5.0.0-alpha.16",
         "@babylonjs/loaders": "5.0.0-alpha.16",
+        "@babylonjs/materials": "5.0.0-alpha.16",
         "ecsy": "0.4.2"
     },
     "devDependencies": {

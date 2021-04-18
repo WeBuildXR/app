@@ -1,5 +1,6 @@
 import { Engine as BabylonEngine } from "@babylonjs/core/Engines/engine"
 import { EngineOptions as BabylonEngineOptions } from "@babylonjs/core/Engines/thinEngine"
+import { GlowLayer } from "@babylonjs/core/Layers/glowLayer"
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight"
 import { Matrix, Vector3 as BabylonVector3 } from "@babylonjs/core/Maths/math"
 import { AssetsManager as BabylonAssetsManager } from "@babylonjs/core/Misc/assetsManager"
@@ -9,9 +10,6 @@ import { Entity as EcsyEntity, System as EcsySystem } from "ecsy"
 import { disposeComponent } from "../common/babylonUtils"
 import { BabylonComponent } from "../components/BabylonComponent"
 import { Scene } from "../components/Scene"
-import { DebugLayer } from "@babylonjs/core/Debug"
-import "@babylonjs/inspector"
-import { GlowLayer } from "@babylonjs/core/Layers/glowLayer"
 
 export class SceneSystem extends EcsySystem {
 
@@ -24,7 +22,8 @@ export class SceneSystem extends EcsySystem {
 
   public getPickedPoint() {
     const scene = this.activeScene
-    const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), null)
+    console.log('createPickingRay',scene.pointerX, scene.pointerY)
+    const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), scene.activeCamera)
     const hit = scene.pickWithRay(ray)
     return hit?.pickedPoint
   }

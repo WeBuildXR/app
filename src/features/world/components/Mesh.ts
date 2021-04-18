@@ -18,19 +18,22 @@ export class Mesh extends EcsyComponent<Mesh> implements BabylonComponent<Babylo
     url?: string
     options?: MeshOptions
     material?: Material
+    metadata?: any
 }
 
 Mesh.schema = {
     type: { type: EcsyTypes.String },
     url: { type: EcsyTypes.String },
     options: { type: EcsyTypes.Ref },
-    material: { type: EcsyTypes.Ref }
+    material: { type: EcsyTypes.Ref },
+    metadata: { type: EcsyTypes.Ref }
 }
 
 export interface Material {
     id?: string
     alpha?: number
     backFaceCulling?: boolean
+    useGridMaterial?: boolean
     color?: MaterialColorAttributes
     texture?: MaterialTextureProperties
 }

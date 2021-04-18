@@ -13,6 +13,7 @@ import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture
 import { Control } from "@babylonjs/gui/2D/controls/control"
 import { Rectangle } from "@babylonjs/gui/2D/controls/rectangle"
 import { TextBlock } from "@babylonjs/gui/2D/controls/textBlock"
+import { GridMaterial } from "@babylonjs/materials/grid/gridMaterial"
 import { Entity, System } from "ecsy"
 import { disposeComponent, hexToColor3, updateTransform } from "../common/babylonUtils"
 import { BabylonComponent } from "../components/BabylonComponent"
@@ -55,8 +56,9 @@ export class MeshSystem extends System {
     private async createMesh(mesh: Mesh, scene: BabylonScene, assetManager: BabylonAssetsManager) {
         const options = mesh.options || {}
         if (mesh.type == MeshTypes.Box) {
-            mesh.babylonComponent = BabylonMeshBuilder.CreateBox("", options, scene)
+            mesh.babylonComponent = BabylonMeshBuilder.CreateBox("Box", options, scene)
             mesh.babylonComponent.checkCollisions = true
+            mesh.babylonComponent.metadata = mesh.metadata
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Ground) {
             mesh.babylonComponent = BabylonMeshBuilder.CreateGround("Ground", options, scene)
@@ -74,10 +76,12 @@ export class MeshSystem extends System {
         } else if (mesh.type == MeshTypes.Plane) {
             mesh.babylonComponent = BabylonMeshBuilder.CreatePlane("", options, scene)
             mesh.babylonComponent.checkCollisions = true
+            mesh.babylonComponent.isPickable = false
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Model) {
             mesh.babylonComponent = await this.loadMesh(mesh.url!, assetManager)
             mesh.babylonComponent.checkCollisions = true
+            mesh.babylonComponent.metadata = mesh.metadata
             await this.applyMaterial(mesh, scene, assetManager)
         } else {
             throw new Error(`Unsupported mesh type: ${mesh.type}`)
@@ -86,55 +90,63 @@ export class MeshSystem extends System {
 
     private async applyMaterial(mesh: Mesh, scene: BabylonScene, assetManager: BabylonAssetsManager) {
         if (mesh.material) {
-            const material = this.createMaterial(mesh.material.id, scene)
-            if (mesh.material.alpha) {
-                material.alpha = mesh.material.alpha
+            if (mesh.material.useGridMaterial) {
+                const gridMaterial = new GridMaterial("", scene)
+                if (mesh.material.color?.emissive) {
+                    gridMaterial.lineColor = BabylonColor3.FromHexString(mesh.material.color?.emissive)
+                }
+                mesh.babylonComponent.material = gridMaterial
+            } else {
+                const material = this.createMaterial(mesh.material.id, scene)
+                if (mesh.material.alpha) {
+                    material.alpha = mesh.material.alpha
+                }
+                if (mesh.material.backFaceCulling) {
+                    material.backFaceCulling = true
+                }
+                if (mesh.material.color) {
+                    this.setColorAttributes(material, mesh.material.color)
+                }
+                if (mesh.material.texture) {
+                    if (mesh.material.texture.diffuse) {
+                        material.diffuseTexture = await this.loadMaterial(mesh.material.texture.diffuse.url, assetManager)
+                        this.setTextureAttributes(material.diffuseTexture as BabylonTexture, mesh.material.texture.diffuse)
+                    }
+                    if (mesh.material.texture.specular) {
+                        material.specularTexture = await this.loadMaterial(mesh.material.texture.specular.url, assetManager)
+                        this.setTextureAttributes(material.specularTexture as BabylonTexture, mesh.material.texture.specular)
+                    }
+                    if (mesh.material.texture.emissive) {
+                        material.emissiveTexture = await this.loadMaterial(mesh.material.texture.emissive.url, assetManager)
+                        this.setTextureAttributes(material.emissiveTexture as BabylonTexture, mesh.material.texture.emissive)
+                    }
+                    if (mesh.material.texture.ambient) {
+                        material.ambientTexture = await this.loadMaterial(mesh.material.texture.ambient.url, assetManager)
+                        this.setTextureAttributes(material.ambientTexture as BabylonTexture, mesh.material.texture.ambient)
+                    }
+                    if (mesh.material.texture.bump) {
+                        material.bumpTexture = await this.loadMaterial(mesh.material.texture.bump.url, assetManager)
+                        this.setTextureAttributes(material.bumpTexture as BabylonTexture, mesh.material.texture.bump)
+                    }
+                    if (mesh.material.texture.lightmap) {
+                        material.lightmapTexture = await this.loadMaterial(mesh.material.texture.lightmap.url, assetManager)
+                        this.setTextureAttributes(material.lightmapTexture as BabylonTexture, mesh.material.texture.lightmap)
+                    }
+                    if (mesh.material.texture.opacity) {
+                        material.opacityTexture = await this.loadMaterial(mesh.material.texture.opacity.url, assetManager)
+                        this.setTextureAttributes(material.opacityTexture as BabylonTexture, mesh.material.texture.opacity)
+                    }
+                    if (mesh.material.texture.reflection) {
+                        material.reflectionTexture = await this.loadMaterial(mesh.material.texture.reflection.url, assetManager)
+                        this.setTextureAttributes(material.reflectionTexture as BabylonTexture, mesh.material.texture.reflection)
+                    }
+                    if (mesh.material.texture.refraction) {
+                        material.refractionTexture = await this.loadMaterial(mesh.material.texture.refraction.url, assetManager)
+                        this.setTextureAttributes(material.refractionTexture as BabylonTexture, mesh.material.texture.refraction)
+                    }
+                }
+                mesh.babylonComponent.material = material
             }
-            if (mesh.material.backFaceCulling) {
-                material.backFaceCulling = true
-            }
-            if (mesh.material.color) {
-                this.setColorAttributes(material, mesh.material.color)
-            }
-            if (mesh.material.texture) {
-                if (mesh.material.texture.diffuse) {
-                    material.diffuseTexture = await this.loadMaterial(mesh.material.texture.diffuse.url, assetManager)
-                    this.setTextureAttributes(material.diffuseTexture as BabylonTexture, mesh.material.texture.diffuse)
-                }
-                if (mesh.material.texture.specular) {
-                    material.specularTexture = await this.loadMaterial(mesh.material.texture.specular.url, assetManager)
-                    this.setTextureAttributes(material.specularTexture as BabylonTexture, mesh.material.texture.specular)
-                }
-                if (mesh.material.texture.emissive) {
-                    material.emissiveTexture = await this.loadMaterial(mesh.material.texture.emissive.url, assetManager)
-                    this.setTextureAttributes(material.emissiveTexture as BabylonTexture, mesh.material.texture.emissive)
-                }
-                if (mesh.material.texture.ambient) {
-                    material.ambientTexture = await this.loadMaterial(mesh.material.texture.ambient.url, assetManager)
-                    this.setTextureAttributes(material.ambientTexture as BabylonTexture, mesh.material.texture.ambient)
-                }
-                if (mesh.material.texture.bump) {
-                    material.bumpTexture = await this.loadMaterial(mesh.material.texture.bump.url, assetManager)
-                    this.setTextureAttributes(material.bumpTexture as BabylonTexture, mesh.material.texture.bump)
-                }
-                if (mesh.material.texture.lightmap) {
-                    material.lightmapTexture = await this.loadMaterial(mesh.material.texture.lightmap.url, assetManager)
-                    this.setTextureAttributes(material.lightmapTexture as BabylonTexture, mesh.material.texture.lightmap)
-                }
-                if (mesh.material.texture.opacity) {
-                    material.opacityTexture = await this.loadMaterial(mesh.material.texture.opacity.url, assetManager)
-                    this.setTextureAttributes(material.opacityTexture as BabylonTexture, mesh.material.texture.opacity)
-                }
-                if (mesh.material.texture.reflection) {
-                    material.reflectionTexture = await this.loadMaterial(mesh.material.texture.reflection.url, assetManager)
-                    this.setTextureAttributes(material.reflectionTexture as BabylonTexture, mesh.material.texture.reflection)
-                }
-                if (mesh.material.texture.refraction) {
-                    material.refractionTexture = await this.loadMaterial(mesh.material.texture.refraction.url, assetManager)
-                    this.setTextureAttributes(material.refractionTexture as BabylonTexture, mesh.material.texture.refraction)
-                }
-            }
-            mesh.babylonComponent.material = material
         }
     }
 
@@ -142,7 +154,7 @@ export class MeshSystem extends System {
         if (id && this.materialCache[id]) {
             return this.materialCache[id]
         } else {
-            const material = new BabylonStandardMaterial("", scene)
+            const material = new BabylonStandardMaterial(id || "", scene)
             if (id) {
                 this.materialCache[id] = material
             }

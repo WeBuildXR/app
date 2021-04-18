@@ -14,11 +14,16 @@ export class MenuSystem extends EcsySystem {
     /** @hidden */
     execute() {
         this.queries.menu.added.forEach((entity: EcsyEntity) => {
-            const mesh = entity.getComponent(Mesh)!
-            const menu = entity.getComponent(Menu)!
-            const behavior = new MenuBehavior(menu.items)
-            behavior.name = "MenuSystem"
-            mesh.babylonComponent.addBehavior(behavior)
+            const mesh = entity.getComponent(Mesh)
+            if (mesh && mesh.babylonComponent) {
+                const menu = entity.getComponent(Menu)!
+                const behavior = mesh.babylonComponent.getBehaviorByName("MenuSystem")
+                if (!behavior) {
+                    const behavior = new MenuBehavior(menu.items)
+                    behavior.name = "MenuSystem"
+                    mesh.babylonComponent.addBehavior(behavior)
+                }
+            }
         })
         this.queries.menu.removed.forEach((entity: EcsyEntity) => {
             const mesh = entity.getComponent(Mesh)!
