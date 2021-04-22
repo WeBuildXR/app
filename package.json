@@ -9,7 +9,9 @@
         "@babylonjs/inspector": "5.0.0-alpha.16",
         "@babylonjs/loaders": "5.0.0-alpha.16",
         "@babylonjs/materials": "5.0.0-alpha.16",
-        "ecsy": "0.4.2"
+        "ecsy": "0.4.2",
+        "raw-loader": "^4.0.2",
+        "web-ifc": "0.0.17"
     },
     "devDependencies": {
         "clean-webpack-plugin": "^3.0.0",

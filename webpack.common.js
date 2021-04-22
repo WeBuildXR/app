@@ -18,6 +18,7 @@ module.exports = {
     resolve: {
         extensions: [".ts", ".js"],
         fallback: {
+            crypto: false,
             fs: false,
             path: false
         },
@@ -50,6 +51,14 @@ module.exports = {
                     },
                 ],
             },
+            {
+                test: /\.wasm?$/,
+                type: "webassembly/async"
+            },
+            {
+                test: /\.ifc?$/,
+                use: 'raw-loader',
+            },
         ],
     },
     plugins: [
@@ -59,4 +68,7 @@ module.exports = {
             template: path.resolve(appDirectory, "public/index.html"),
         }),
     ],
+    experiments: {
+        syncWebAssembly: true
+    }
 };

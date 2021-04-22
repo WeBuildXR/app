@@ -3,7 +3,7 @@ import { Entity } from "ecsy";
 import removeIconUrl from "../assets/textures/remove-icon.png";
 import leftIconUrl from "../assets/textures/left-icon.png";
 import rightIconUrl from "../assets/textures/right-icon.png";
-import ModelData from "./core/ModelDataA";
+import ModelData from "./core/ModelDataIFC";
 import { AddBlock, Block, SelectedBlock } from "./features/building/components/Block";
 import { VoxelSettings } from "./features/building/components/VoxelSettings";
 import { VoxelSystem } from "./features/building/systems/VoxelSystem";
@@ -19,6 +19,8 @@ import { Camera } from "./features/world/components/Camera";
 import { Mesh, MeshTypes } from "./features/world/components/Mesh";
 import { Transform } from "./features/world/components/Transform";
 import { world } from "./features/world/world";
+import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
+import { IfcLoader } from "./core/ifcloader";
 
 const textures = ["Wood_5.png", "block.jpg", "brick.jpg", "colors.png", "crate.png", "cube1.jpg", "cube2.jpg", "cube3.jpg", "cube4.jpg", "cube5.jpg", "Earth 1.png", "Earth 2.png", "Earth 3.png", "Floor_1.png", "Floor_2.png", "grass.jpg", "Grass_1.png", "Grass_2.png", "Grass_3.png", "Ground_1.png", "Ground_2.png", "Ground_3.png", "Ground_4.png", "Ground_5.png", "Ice.png", "Lava.png", "Metal wall.png", "Rock 1.png", "Rock 2.png", "Roof_1.png", "Roof_2.png", "Soil.png", "TreeBark.png", "vol_2_2_Base_Color.png", "vol_2_2_Height.png", "Vol_39_7_Height.png", "Vol_39_7_Roughness.png", "Wall 1.png", "Wall 2.png", "Wall_1.png", "Wall_2.png", "Wall_3.png", "Wood_1.png", "Wood_2.png", "Wood_3.png", "Wood_4.png"]
 
@@ -36,6 +38,8 @@ const settings = {
   depth: 80,
   selectedTexture: "block.jpg"
 }
+
+SceneLoader.RegisterPlugin(new IfcLoader())
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const game = world.instance()
@@ -174,7 +178,6 @@ game.createEntity().addComponent(KeyboardInput, {
 function createModelMenu(entity: Entity) {
   entity.addComponent(Menu, {
     items: ModelData.map(({ width, height, depth, url, name }) => ({
-      imageUrl: url,
       text: name,
       action: () => {
         settings.width = width
@@ -200,7 +203,7 @@ function createTextureMenu(entity: Entity) {
 }
 
 function addBlock(x: number, y: number, z: number, facetAddDirection: number) {
-  if (settings.selectedTexture.indexOf(".glb") > -1) {
+  if (settings.selectedTexture.indexOf(".glb") > -1 || settings.selectedTexture.indexOf(".ifc") > -1) {
     game.createEntity().addComponent(AddBlock, {
       x, y, z, facetAddDirection,
       width: settings.width,

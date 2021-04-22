@@ -284,9 +284,9 @@ export class VoxelSystem extends EcsySystem {
 
     private normalizeCoordinates(x: number, y: number, z: number) {
         return {
-            voxelX: Math.ceil(x),
-            voxelY: Math.ceil(y),
-            voxelZ: Math.ceil(z)
+            voxelX: Math.round(x),
+            voxelY: Math.round(y),
+            voxelZ: Math.round(z)
         }
     }
 
