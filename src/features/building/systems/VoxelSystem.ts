@@ -16,7 +16,7 @@ export class VoxelSystem extends EcsySystem {
         create: { components: [AddBlock], listen: { added: true } },
         select: { components: [SelectedBlock], listen: { added: true, removed: true } },
         move: { components: [Block, Transform], listen: { changed: [Transform] } },
-        blocks: { components: [Block], listen: { added: true, removed: true } },
+        models: { components: [Mesh], listen: { removed: true } },
     }
     /** @hidden */
     queries: any
@@ -252,24 +252,13 @@ export class VoxelSystem extends EcsySystem {
         })
 
         //Changing / Removing Blocks
-        this.queries.blocks.added.forEach((entity: EcsyEntity) => {
-            const block = entity.getComponent(Block)!
-            const transform = entity.getMutableComponent(Transform)!
-            transform.position.x = block.voxelX
-            transform.position.y = block.voxelY
-            transform.position.z = block.voxelZ
-        })
-        this.queries.blocks.removed.forEach((entity: EcsyEntity) => {
+        this.queries.models.removed.forEach((entity: EcsyEntity) => {
             this.clearSelection()
-            entity.removeComponent(AddBlock, true)
-            //entity.removeComponent(Mesh)
-            //TODO: figure out why removing the Mesh component doesn't work
-            const block = entity.getRemovedComponent(Block)!
+            const block = entity.getComponent(Block)!
             const old = this.getBlockName(block.voxelX, block.voxelY, block.voxelZ)
             delete this.blocks[old]
-            const mesh = entity.getComponent(Mesh)!
-            mesh.babylonComponent.dispose()
-            //entity.remove(true)
+            entity.removeComponent(AddBlock, true)
+            entity.removeComponent(Block, true)
         })
     }
 

@@ -1,9 +1,9 @@
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Entity } from "ecsy";
-import removeIconUrl from "../assets/textures/remove-icon.png";
-import leftIconUrl from "../assets/textures/left-icon.png";
-import rightIconUrl from "../assets/textures/right-icon.png";
-import ModelData from "./core/ModelDataIFC";
+import removeIconUrl from "../assets/images/remove-icon.png";
+import leftIconUrl from "../assets/images/left-icon.png";
+import rightIconUrl from "../assets/images/right-icon.png";
+import logoUrl from "../assets/images/webuild.png";
 import { AddBlock, Block, SelectedBlock } from "./features/building/components/Block";
 import { VoxelSettings } from "./features/building/components/VoxelSettings";
 import { VoxelSystem } from "./features/building/systems/VoxelSystem";
@@ -22,7 +22,11 @@ import { world } from "./features/world/world";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { IfcLoader } from "./core/ifcloader";
 
-const textures = ["Wood_5.png", "block.jpg", "brick.jpg", "colors.png", "crate.png", "cube1.jpg", "cube2.jpg", "cube3.jpg", "cube4.jpg", "cube5.jpg", "Earth 1.png", "Earth 2.png", "Earth 3.png", "Floor_1.png", "Floor_2.png", "grass.jpg", "Grass_1.png", "Grass_2.png", "Grass_3.png", "Ground_1.png", "Ground_2.png", "Ground_3.png", "Ground_4.png", "Ground_5.png", "Ice.png", "Lava.png", "Metal wall.png", "Rock 1.png", "Rock 2.png", "Roof_1.png", "Roof_2.png", "Soil.png", "TreeBark.png", "vol_2_2_Base_Color.png", "vol_2_2_Height.png", "Vol_39_7_Height.png", "Vol_39_7_Roughness.png", "Wall 1.png", "Wall 2.png", "Wall_1.png", "Wall_2.png", "Wall_3.png", "Wood_1.png", "Wood_2.png", "Wood_3.png", "Wood_4.png"]
+import textures from "./data/textures"
+import models from "./data/models"
+import ifc from "./data/ifc"
+import { Drag } from "./features/building/components/Drag";
+import { DragSystem } from "./features/building/systems/DragSystem";
 
 const webuild = {
   colors: {
@@ -32,19 +36,23 @@ const webuild = {
   }
 }
 
-const settings = {
+const settings: any = {
   width: 80,
   height: 80,
   depth: 80,
-  selectedTexture: "block.jpg"
+  selectedTexture: textures[0].url,
+  selectedIFC: ifc[0],
+  selectedModel: ""
 }
 
-SceneLoader.RegisterPlugin(new IfcLoader())
+const ifcLoader = new IfcLoader()
+ifcLoader.MaterialTexture = settings.selectedTexture
+SceneLoader.RegisterPlugin(ifcLoader)
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const game = world.instance()
 
-game.start(canvas, [InputSystem, MenuSystem, VoxelSystem, ShareSystem])
+game.start(canvas, [InputSystem, MenuSystem, VoxelSystem, DragSystem, ShareSystem])
 
 game.createScene()
 
@@ -66,45 +74,15 @@ const ground = game.createEntity()
   })
 ground.getMutableComponent(Transform)!.position.y = -.5;
 
-addWall(0, 0, (settings.height / 2), 0, webuild.colors.cyan)
-addWall(0, 0, -(settings.height / 2), 0, webuild.colors.purple)
-addWall(-(settings.width / 2), 0, 0, 90, webuild.colors.magenta)
-addWall((settings.width / 2), 0, 0, -90, webuild.colors.magenta)
+const frontWall = addWall(0, 0, (settings.height / 2), 0)
+const backWall = addWall(0, 0, -(settings.height / 2), 0)
+const leftWall = addWall(-(settings.width / 2), 0, 0, 90)
+const rightWall = addWall((settings.width / 2), 0, 0, -90)
 addCeiling()
-
-const menu = game.createEntity().addComponent(Mesh, {
-  type: MeshTypes.Plane,
-  options: {
-    width: settings.width * .3,
-    height: 8
-  },
-  material: {
-    color: {
-      diffuse: webuild.colors.cyan.toHexString()
-    }
-  }
-})
-menu.getMutableComponent(Transform)!.position.x = -14
-menu.getMutableComponent(Transform)!.position.y = 6
-menu.getMutableComponent(Transform)!.position.z = (settings.height / 2) - 2
-createTextureMenu(menu)
-
-const menu2 = game.createEntity().addComponent(Mesh, {
-  type: MeshTypes.Plane,
-  options: {
-    width: settings.width * .3,
-    height: 8
-  },
-  material: {
-    color: {
-      diffuse: webuild.colors.magenta.toHexString()
-    }
-  }
-})
-menu2.getMutableComponent(Transform)!.position.x = 12
-menu2.getMutableComponent(Transform)!.position.y = 12
-menu2.getMutableComponent(Transform)!.position.z = (settings.height / 2) - 2
-createModelMenu(menu2)
+createTextureMenu(leftWall, "wall")
+createTextureMenu(backWall, "floor")
+createTextureMenu(rightWall, "block")
+createModelMenu(frontWall)
 
 const logo = game.createEntity().addComponent(Mesh, {
   type: MeshTypes.Plane,
@@ -114,15 +92,16 @@ const logo = game.createEntity().addComponent(Mesh, {
   },
   material: {
     texture: {
-      diffuse: { url: "./textures/webuild.png" }
+      diffuse: { url: logoUrl }
     },
     color: {
-      diffuse: "#FFFFFF"
+      diffuse: "#FFFFFF",
+      ambient: "#FFFFFF"
     }
   }
 })
-logo.getMutableComponent(Transform)!.position.x = -15
-logo.getMutableComponent(Transform)!.position.y = 15
+logo.getMutableComponent(Transform)!.position.x = -18
+logo.getMutableComponent(Transform)!.position.y = 18
 logo.getMutableComponent(Transform)!.position.z = (settings.height / 2) - 1
 
 game.createEntity().addComponent(VoxelSettings, settings)
@@ -177,44 +156,88 @@ game.createEntity().addComponent(KeyboardInput, {
 
 function createModelMenu(entity: Entity) {
   entity.addComponent(Menu, {
-    items: ModelData.map(({ width, height, depth, url, name }) => ({
-      text: name,
+    items: ifc.map((model) => ({
+      text: model.name,
       action: () => {
-        settings.width = width
-        settings.height = height
-        settings.depth = depth
-        settings.selectedTexture = url
-        console.log('selectedModel', url)
+        console.log('selectedIFC', model.name)
+        settings.selectedIFC = model
+        settings.selectedModel = undefined
       }
-    }))
+    })).concat(models.map((model) => ({
+      imageUrl: model.preview,
+      text: model.category,
+      action: () => {
+        console.log('selectedModel', model.url)
+        settings.selectedIFC = undefined
+        settings.selectedModel = model.url
+      }
+    })))
   })
 }
 
-function createTextureMenu(entity: Entity) {
+function createTextureMenu(entity: Entity, group: "wall" | "ground" | "floor" | "block") {
   entity.addComponent(Menu, {
-    items: textures.map((filename) => ({
-      imageUrl: `./textures/all/${filename}`,
+    items: textures.filter(({ category }) => category === group).map(({ url }) => ({
+      imageUrl: url,
       action: () => {
-        console.log('selectedTexture', filename)
-        settings.selectedTexture = filename
+        if (group === "wall") {
+          console.log('selectedTexture', url)
+          settings.selectedTexture = url
+          ifcLoader.MaterialTexture = url
+        }
+        else if (group === "ground" || group === "floor") {
+          const mesh = ground.getMutableComponent(Mesh)!
+          mesh.material = {
+            texture: {
+              diffuse: { url }
+            }
+          }
+        }
+        else if (group === "block") {
+          settings.selectedTexture = url
+          settings.selectedIFC = undefined
+          settings.selectedModel = undefined
+        }
       }
     }))
   })
 }
 
 function addBlock(x: number, y: number, z: number, facetAddDirection: number) {
-  if (settings.selectedTexture.indexOf(".glb") > -1 || settings.selectedTexture.indexOf(".ifc") > -1) {
-    game.createEntity().addComponent(AddBlock, {
+  if (settings.selectedIFC) {
+    //add IFC model
+    const entity = game.createEntity().addComponent(AddBlock, {
       x, y, z, facetAddDirection,
-      width: settings.width,
-      height: settings.height,
-      depth: settings.depth,
-      modelUrl: settings.selectedTexture
+      width: settings.selectedIFC.width,
+      height: settings.selectedIFC.height,
+      depth: settings.selectedIFC.depth,
+      modelUrl: settings.selectedIFC.url
     })
+    addBlockMenu(entity)
+  } else if (settings.selectedModel) {
+    //add GLB model
+    const entity = game.createEntity()
+      .addComponent(Mesh, {
+        type: MeshTypes.Model,
+        url: settings.selectedModel
+      })
+      .addComponent(Drag, {
+        allowScaling: true
+      })
+    const transform = entity.getMutableComponent(Transform)!
+    transform.position.x = x
+    transform.position.y = y
+    transform.position.z = z
+    transform.scale.x = 3
+    transform.scale.y = 3
+    transform.scale.z = 3
+    //TODO: add drag behavior and model menu
+    addBlockMenu(entity)
   } else {
+    //add textured block
     game.createEntity().addComponent(AddBlock, {
       x, y, z, facetAddDirection,
-      textureUrl: `./textures/all/${settings.selectedTexture}`
+      textureUrl: settings.selectedTexture
     })
   }
 }
@@ -237,7 +260,7 @@ function addBlockMenu(entity: Entity) {
         {
           text: "Remove",
           imageUrl: removeIconUrl,
-          action: () => entity.removeComponent(Block)
+          action: () => entity.removeComponent(Mesh)
         },
         {
           text: "Rotate Right",
@@ -255,7 +278,7 @@ function addBlockMenu(entity: Entity) {
   }
 }
 
-function addWall(x: number, y: number, z: number, r: number, c: Color3) {
+function addWall(x: number, y: number, z: number, r: number) {
   const wall = game.createEntity().addComponent(Mesh, {
     type: MeshTypes.Box,
     options: {
@@ -271,6 +294,7 @@ function addWall(x: number, y: number, z: number, r: number, c: Color3) {
   wall.getMutableComponent(Transform)!.position.y = y
   wall.getMutableComponent(Transform)!.position.z = z
   wall.getMutableComponent(Transform)!.rotation.y = r
+  return wall
 }
 
 function addCeiling() {

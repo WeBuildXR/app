@@ -67,7 +67,11 @@ export class world extends EcsyWorld {
                 }
             }
         }
-        this.registerSystem(system, worldProperties)
+        console.log('system registered:',system.name)
+        this.registerSystem(system, {
+            priority: this.getSystems().length,
+            ...worldProperties
+        })
         return this
     }
 

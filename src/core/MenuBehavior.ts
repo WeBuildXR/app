@@ -4,10 +4,8 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode"
 import { Container3D } from "@babylonjs/gui/3D/controls/container3D"
 import { HolographicButton } from "@babylonjs/gui/3D/controls/holographicButton"
-import { MeshButton3D } from "@babylonjs/gui/3D/controls/meshButton3D"
 import { PlanePanel } from "@babylonjs/gui/3D/controls/planePanel"
 import { GUI3DManager } from "@babylonjs/gui/3D/gui3DManager"
-import { degreeToRadians } from "../features/world/common/babylonUtils"
 
 export interface MenuButton {
     text?: string
@@ -31,24 +29,21 @@ export class MenuBehavior implements Behavior<Mesh> {
         if (!this.target) {
             const scene = target.getScene()
             this.manager = new GUI3DManager(scene)
-            var appBar = new TransformNode("", scene)
+            var appBar = new TransformNode("Menu", scene)
             var toolbar = new PlanePanel()
-            toolbar.margin = 0
             this.manager.addControl(toolbar)
             toolbar.linkToTransformNode(appBar)
+            this.behavior = new AttachToBoxBehavior(appBar)
+            target.addBehavior(this.behavior)
+            toolbar.margin = 0
 
             if (this.buttons.length < 5) {
                 appBar.scaling.scaleInPlace(0.2)
                 toolbar.rows = 1
-                this.behavior = new AttachToBoxBehavior(appBar)
-                target.addBehavior(this.behavior)
             } else {
+                appBar.scaling.scaleInPlace(3)
                 toolbar.columns = 10
-                appBar.setParent(target)
-                appBar.position.x = 0
-                appBar.position.y = 0
-                appBar.position.z = -1
-                appBar.scaling.scaleInPlace(2)
+                this.behavior.distanceAwayFromBottomOfFace = 10
             }
 
             toolbar.blockLayout = true;
@@ -58,15 +53,11 @@ export class MenuBehavior implements Behavior<Mesh> {
                     button.text = text
                 }
                 if (imageUrl) {
-                    if(imageUrl.indexOf(".glb")>-1){
-                        button.imageUrl = "./textures/wire-box.png"
-                    }else{
-                        button.imageUrl = imageUrl
-                    }
+                    button.imageUrl = imageUrl
                 }
                 button.onPointerClickObservable.add(action)
                 toolbar.addControl(button)
-                button.content
+                button.tooltipText = imageUrl!
             }
             toolbar.blockLayout = false;
 

@@ -6,14 +6,15 @@ import { Menu } from "../components/Menu"
 export class MenuSystem extends EcsySystem {
     /** @hidden */
     static queries = {
-        menu: { components: [Mesh, Menu], listen: { added: true, removed: true } }
+        mesh: { components: [Mesh, Menu], listen: { added: true } },
+        menu: { components: [Menu], listen: { removed: true } }
     }
     /** @hidden */
     queries: any
 
     /** @hidden */
     execute() {
-        this.queries.menu.added.forEach((entity: EcsyEntity) => {
+        this.queries.mesh.added.forEach((entity: EcsyEntity) => {
             const mesh = entity.getComponent(Mesh)
             if (mesh && mesh.babylonComponent) {
                 const menu = entity.getComponent(Menu)!

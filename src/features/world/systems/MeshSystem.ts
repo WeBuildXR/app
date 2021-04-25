@@ -1,6 +1,6 @@
 import { ActionManager } from "@babylonjs/core/Actions/actionManager"
 import { ExecuteCodeAction } from "@babylonjs/core/Actions/directActions"
-import { SceneLoader as BabylonSceneLoader } from "@babylonjs/core/Loading/sceneLoader"
+import { ISceneLoaderPlugin, SceneLoader as BabylonSceneLoader, SceneLoader } from "@babylonjs/core/Loading/sceneLoader"
 import { StandardMaterial as BabylonStandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { CubeTexture as BabylonCubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture"
 import { Texture as BabylonTexture } from "@babylonjs/core/Materials/Textures/texture"
@@ -25,6 +25,7 @@ export class MeshSystem extends System {
     /** @hidden */
     static queries = {
         meshes: { components: [Mesh], listen: { added: true, removed: true } },
+        materials: { components: [Mesh], listen: { changed: true } },
     }
 
     /** @hidden */
@@ -47,6 +48,15 @@ export class MeshSystem extends System {
             updateTransform(entity, mesh)
         })
 
+        this.queries.materials.changed.forEach(async (entity: Entity) => {
+            const mesh = entity.getMutableComponent(Mesh)!
+            if (mesh.babylonComponent) {
+                const sceneSystem = this.world.getSystem(SceneSystem)
+                const assetManager = sceneSystem.getAssetManager()
+                await this.applyMaterial(mesh, sceneSystem.activeScene, assetManager)
+            }
+        })
+
         this.queries.meshes.removed.forEach((entity: Entity) => {
             const mesh = entity.getRemovedComponent(Mesh) as BabylonComponent<BabylonMesh>
             disposeComponent(mesh)
@@ -61,7 +71,18 @@ export class MeshSystem extends System {
             mesh.babylonComponent.metadata = mesh.metadata
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Ground) {
-            mesh.babylonComponent = BabylonMeshBuilder.CreateGround("Ground", options, scene)
+            const halfWidth = options.width! / 2
+            const halfHeight = options.width! / 2
+            mesh.babylonComponent = BabylonMeshBuilder.CreateTiledGround("Ground", {
+                xmin: -halfWidth,
+                zmin: -halfHeight,
+                xmax: halfWidth,
+                zmax: halfHeight,
+                subdivisions: {
+                    w: options.width!,
+                    h: options.height!
+                }
+            }, scene)
             mesh.babylonComponent.checkCollisions = true
             await this.applyMaterial(mesh, scene, assetManager)
         } else if (mesh.type == MeshTypes.Sky) {
@@ -91,7 +112,7 @@ export class MeshSystem extends System {
     private async applyMaterial(mesh: Mesh, scene: BabylonScene, assetManager: BabylonAssetsManager) {
         if (mesh.material) {
             if (mesh.material.useGridMaterial) {
-                const gridMaterial = new GridMaterial("", scene)
+                const gridMaterial = new GridMaterial("GridMaterial", scene)
                 if (mesh.material.color?.emissive) {
                     gridMaterial.lineColor = BabylonColor3.FromHexString(mesh.material.color?.emissive)
                 }

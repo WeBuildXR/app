@@ -10,9 +10,10 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Scene } from "@babylonjs/core/scene";
 import { IndicesArray } from "@babylonjs/core/types";
 import * as WEBIFC from "web-ifc/web-ifc-api";
-import img from '../../public/textures/Img_2021_03_26_14_15_38.jpg';
 
 export class IfcLoader implements ISceneLoaderPluginAsync {
+
+    public MaterialTexture: string
 
     name = "IfcLoader"
     extensions = {
@@ -244,7 +245,7 @@ export class IfcLoader implements ISceneLoaderPluginAsync {
         myMaterial.backFaceCulling = false;
         //myMaterial.disableLighting = true;
 
-        myMaterial.diffuseTexture = new Texture(img, scene);
+        myMaterial.diffuseTexture = new Texture(this.MaterialTexture, scene);
 
         return myMaterial;
     }
