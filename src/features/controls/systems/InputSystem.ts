@@ -1,47 +1,51 @@
-import { AbstractMesh, MeshBuilder, SceneLoader, WebXRAbstractMotionController, WebXRControllerComponent, WebXRControllerPointerSelection, WebXRFeatureName, WebXRHandTracking } from "@babylonjs/core"
 import { Camera } from "@babylonjs/core/Cameras"
+import { RayHelper } from "@babylonjs/core/Debug/rayHelper"
 import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core/Events/keyboardEvents"
-import { PointerEventTypes, PointerInfo } from "@babylonjs/core/Events/pointerEvents"
-import { Quaternion, Vector3 as BabylonVector3 } from "@babylonjs/core/Maths/math.vector"
+import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader"
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
+import { Color3 } from "@babylonjs/core/Maths/math.color"
+import { Quaternion, Vector3 as BabylonVector3, Vector3 } from "@babylonjs/core/Maths/math.vector"
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { Scene as BabylonScene } from "@babylonjs/core/scene"
+import { WebXRControllerPointerSelection } from "@babylonjs/core/XR/features/WebXRControllerPointerSelection"
+import { IWebXRHandTrackingOptions, WebXRHandTracking } from "@babylonjs/core/XR/features/WebXRHandTracking"
+import { WebXRAbstractMotionController } from "@babylonjs/core/XR/motionController/webXRAbstractMotionController"
 import "@babylonjs/core/XR/webXRDefaultExperience"
 import { WebXRDefaultExperience } from "@babylonjs/core/XR/webXRDefaultExperience"
+import { WebXRFeatureName } from "@babylonjs/core/XR/webXRFeaturesManager"
 import { Entity as EcsyEntity, System as EcsySystem } from "ecsy"
+import controllerModel from "../../../../assets/models/webuild-controller-small.glb"
 import { WorldLog, WorldScene } from "../../../core/WorldProperties"
-import { Mesh } from "../../world/components/Mesh"
 import { ControllerInput } from "../components/ControllerInput"
 import { HandInput } from "../components/HandInput"
 import { HeadInput } from "../components/HeadInput"
-import { InputSettings } from "../components/InputSettings"
 import { KeyboardInput } from "../components/KeyboardInput"
 import { PointerInput } from "../components/PointerInput"
-import leftControllerModel from "../../../../assets/models/webuild-controller-small.glb"
-import rightControllerModel from "../../../../assets/models/webuild-controller-small.glb"
 
 export class InputSystem extends EcsySystem implements WorldScene {
     /** @hidden */
     static queries = {
-        settings: { components: [InputSettings], listen: { added: true } },
         controllers: { components: [ControllerInput], listen: { added: true } },
         hands: { components: [HandInput], listen: { added: true } },
-        head: { components: [HeadInput], listen: { added: true, removed: true } },
-        keyboard: { components: [KeyboardInput], listen: { added: true, removed: true } },
-        pointer: { components: [PointerInput], listen: { added: true, removed: true } },
+        head: { components: [HeadInput], listen: { added: true } },
+        keyboard: { components: [KeyboardInput], listen: { added: true } },
+        pointer: { components: [PointerInput], listen: { added: true } },
     }
     /** @hidden */
     queries: any
 
-    public teleport(position: BabylonVector3) {
+    public teleport(x: number, z: number) {
         if (this.xrHelper) {
-            this.xrHelper.baseExperience.camera.position.x = position.x
-            this.xrHelper.baseExperience.camera.position.z = position.z
-        }else{
-            this.getBabylonScene().cameras[0].position.x = position.x
-            this.getBabylonScene().cameras[0].position.z = position.z
+            this.xrHelper.baseExperience.camera.position.x = x
+            this.xrHelper.baseExperience.camera.position.z = z
+        } else {
+            this.getBabylonScene().cameras[0].position.x = x
+            this.getBabylonScene().cameras[0].position.z = z
         }
     }
 
     private xrHelper: WebXRDefaultExperience;
+    private controllerColor: Color3;
 
     getBabylonScene: () => BabylonScene
     logMessage: (message: string) => void
@@ -49,66 +53,36 @@ export class InputSystem extends EcsySystem implements WorldScene {
     init({ getBabylonScene, logMessage }: WorldScene & WorldLog) {
         this.getBabylonScene = getBabylonScene.bind(this)
         this.logMessage = logMessage.bind(this)
+        this.controllerColor = Color3.Random()
     }
 
     /** @hidden */
     execute() {
-        this.queries.settings.added.forEach(async (entity: EcsyEntity) => {
-            const scene = this.getBabylonScene()
-            const settings = entity.getComponent(InputSettings)!
-            const floorMesh = settings.teleportationFloorMesh?.getComponent(Mesh)
-            if (floorMesh?.babylonComponent) {
-                const xrHelper = await this.createXRHelper(scene)
-                xrHelper.teleportation.addFloorMesh(floorMesh.babylonComponent)
-                console.log('teleportationFloorMesh')
-                //TODO: support adding/removing floors for indoor navigation
-            } else {
-                //temporary fix for teleportation
-                const ground = MeshBuilder.CreateGround("Ground", {
-                    width: 50,
-                    height: 50
-                }, scene)
-                const xrHelper = await this.createXRHelper(scene)
-                xrHelper.teleportation.addFloorMesh(ground)
-            }
-            const leftControllerMesh = settings.leftControllerMesh?.getComponent(Mesh)
-            const rightControllerMesh = settings.rightControllerMesh?.getComponent(Mesh)
-            if (leftControllerMesh?.babylonComponent || rightControllerMesh?.babylonComponent) {
-                //TODO: meshes are not loaded yet, this needs some work
-                //const xrHelper = await this.createXRHelper(scene)
-                //xrHelper.input.onControllerAddedObservable.add((inputSource) => {
-                //    inputSource.onMotionControllerInitObservable.add((controller) => {
-                //    })
-                //})
-            }
-        })
-
         this.queries.controllers.added.forEach(async (entity: EcsyEntity) => {
             const input = entity.getMutableComponent(ControllerInput)!
             const scene = this.getBabylonScene()
             const xrHelper = await this.createXRHelper(scene)
             xrHelper.input.onControllerAddedObservable.add((inputSource) => {
+
+                const controllerMaterial = new StandardMaterial("", scene)
+                controllerMaterial.emissiveColor = this.controllerColor
+                inputSource.pointer.material = controllerMaterial
+
                 const controllerInit = (controller: WebXRAbstractMotionController) => {
-                    //if (inputSource.grip) {
-                    //    if (controller.handedness == "left") {
-                    //        const leftControllerMesh = await SceneLoader.ImportMeshAsync("leftController", "", leftControllerModel, scene)
-                    //        leftControllerMesh.meshes[0].setParent(inputSource.pointer)
-                    //        leftControllerMesh.meshes[0].position = BabylonVector3.Zero()
-                    //        leftControllerMesh.meshes[0].position.z = -0.06
-                    //        leftControllerMesh.meshes[0].rotationQuaternion = Quaternion.FromEulerAngles(0, 0, Math.PI)
-                    //    }
-                    //    if (controller.handedness == "right") {
-                    //        const rightControllerMesh = await SceneLoader.ImportMeshAsync("rightController", "", rightControllerModel, scene)
-                    //        rightControllerMesh.meshes[0].setParent(inputSource.pointer)
-                    //        rightControllerMesh.meshes[0].position = BabylonVector3.Zero()
-                    //        rightControllerMesh.meshes[0].position.z = -0.06
-                    //        rightControllerMesh.meshes[0].rotationQuaternion = Quaternion.FromEulerAngles(0, 0, Math.PI)
-                    //    }
-                    //}
+                    console.log('controllerInit')
                     //https://doc.babylonjs.com/divingDeeper/webXR/webXRInputControllerSupport#some-terms-and-classes-to-clear-things-up
                     //MotionControllerComponentType = "trigger" | "squeeze" | "touchpad" | "thumbstick" | "button"
                     if (controller.handedness === "left" || controller.handness === "left") {
                         this.logMessage('left controller ' + controller.profileId)
+
+                        //SceneLoader.ImportMeshAsync("", controllerModel, "", scene).then(({ meshes }) => {
+                        //    const [leftControllerMesh] = meshes
+                        //    leftControllerMesh.name = "LeftController"
+                        //    leftControllerMesh.setParent(inputSource.pointer)
+                        //    leftControllerMesh.position = BabylonVector3.Zero()
+                        //    leftControllerMesh.position.z = -0.06
+                        //    leftControllerMesh.rotationQuaternion = Quaternion.FromEulerAngles(0, 0, Math.PI)
+                        //})
                         const leftThumbstick = typeof (input.onLeftThumbstickMove) === 'function' && controller.getComponentOfType("thumbstick");
                         if (leftThumbstick) {
                             leftThumbstick.onAxisValueChangedObservable.add(({ x, y }) => {
@@ -153,6 +127,14 @@ export class InputSystem extends EcsySystem implements WorldScene {
                     }
                     else if (controller.handedness === "right" || controller.handness == "right") {
                         this.logMessage('right controller ' + controller.profileId)
+                        //SceneLoader.ImportMeshAsync("", controllerModel, "", scene).then(({ meshes }) => {
+                        //    const [leftControllerMesh] = meshes
+                        //    const rightControllerMesh = leftControllerMesh.clone("RightController", inputSource.pointer)!
+                        //    rightControllerMesh.position = BabylonVector3.Zero()
+                        //    rightControllerMesh.position.z = -0.06
+                        //    rightControllerMesh.scaling.y = -1
+                        //    rightControllerMesh.rotationQuaternion = Quaternion.FromEulerAngles(0, 0, Math.PI)
+                        //})
                         const rightThumbstick = typeof (input.onRightThumbstickMove) === 'function' && controller.getComponentOfType("thumbstick");
                         if (rightThumbstick) {
                             rightThumbstick.onAxisValueChangedObservable.add(({ x, y }) => {
@@ -211,15 +193,25 @@ export class InputSystem extends EcsySystem implements WorldScene {
             const input = entity.getMutableComponent(HandInput)!
             const scene = this.getBabylonScene()
             const xrHelper = await this.createXRHelper(scene)
+            const handJoint = MeshBuilder.CreateCapsule("HandJoint", { radius: 0.5, capSubdivisions: 6, subdivisions: 6, tessellation: 36, height: 1.5, orientation: Vector3.Forward() }, scene)
+            const jointMaterial = new StandardMaterial("", scene)
+            jointMaterial.emissiveColor = this.controllerColor
+            handJoint.material = jointMaterial
+            handJoint.position.y = -10
             const handTracking = xrHelper.baseExperience.featuresManager.enableFeature(
                 WebXRFeatureName.HAND_TRACKING,
                 "latest",
                 {
-                    xrInput: xrHelper.input
-                },
+                    xrInput: xrHelper.input,
+                    jointMeshes: {
+                        disableDefaultHandMesh: true,
+                        sourceMesh: handJoint,
+                        scaleFactor: 2
+                    }
+                } as IWebXRHandTrackingOptions,
                 true,
                 false
-            ) as WebXRHandTracking;
+            ) as WebXRHandTracking
             handTracking?.onHandAddedObservable.add((handInput) => {
                 handInput.xrController.onMotionControllerInitObservable.add((controller) => {
                     controller.getMainComponent().onButtonStateChangedObservable.add((eventData) => {
@@ -242,96 +234,70 @@ export class InputSystem extends EcsySystem implements WorldScene {
             const input = entity.getMutableComponent(HeadInput)!
             const scene = this.getBabylonScene()
             const xrHelper = await this.createXRHelper(scene)
-            input.inputHandler = (camera: Camera) => {
+            const inputHandler = (camera: Camera) => {
                 if (typeof (input.onHeadMove) === 'function') {
                     input.onHeadMove(camera.position, camera.getDirection(BabylonVector3.ZeroReadOnly))
                 }
             }
-            xrHelper.input.xrCamera.onViewMatrixChangedObservable.add(input.inputHandler)
-        })
-        this.queries.head.removed.forEach(async (entity: EcsyEntity) => {
-            const input = entity.getComponent(KeyboardInput)!
-            const scene = this.getBabylonScene()
-            const xrHelper = await this.createXRHelper(scene)
-            xrHelper.input.xrCamera.onViewMatrixChangedObservable.removeCallback(input.inputHandler)
+            xrHelper.input.xrCamera.onViewMatrixChangedObservable.add(inputHandler)
         })
 
         this.queries.keyboard.added.forEach((entity: EcsyEntity) => {
             const input = entity.getMutableComponent(KeyboardInput)!
             const scene = this.getBabylonScene()
-            input.inputHandler = ({ type, event }: KeyboardInfo) => {
+            const inputHandler = ({ type, event }: KeyboardInfo) => {
                 if (type === KeyboardEventTypes.KEYDOWN && typeof (input.onKeyDown) === 'function') {
                     input.onKeyDown(event.key)
                 } else if (type === KeyboardEventTypes.KEYUP && typeof (input.onKeyUp) === 'function') {
                     input.onKeyUp(event.key)
                 }
             }
-            scene.onKeyboardObservable.add(input.inputHandler)
-        })
-        this.queries.keyboard.removed.forEach((entity: EcsyEntity) => {
-            const input = entity.getComponent(KeyboardInput)!
-            const scene = this.getBabylonScene()
-            scene.onKeyboardObservable.removeCallback(input.inputHandler)
+            scene.onKeyboardObservable.add(inputHandler)
         })
 
         this.queries.pointer.added.forEach((entity: EcsyEntity) => {
             const input = entity.getMutableComponent(PointerInput)!
             const scene = this.getBabylonScene()
             let moveTimer = performance.now()
-            let dragTimer = performance.now()
-            let isPointerDown = false
-            scene.onPointerDown = () => {
-                isPointerDown = true
-            }
-            scene.onPointerUp = () => {
-                isPointerDown = false
-            }
             if (typeof (input.onPointerMove) === 'function') {
-                scene.onPointerMove = (pointer, _, type) => {
-                    if (performance.now() - moveTimer >= 100 && !isPointerDown) {
-                        const pickInfo = scene.pick(pointer.x, pointer.y)
-                        if (pickInfo && pickInfo.hit && pickInfo.pickedMesh) {
+                scene.onPointerMove = (_, pick) => {
+                    if (performance.now() - moveTimer >= 100 && !scene.isPointerCaptured() && pick.ray) {
+                        const pickInfo = scene.pickWithRay(pick.ray, ({ name }) => name !== "Ground", false)
+                        if (pickInfo && pickInfo.hit) {
+                            const { x, y, z } = pickInfo.pickedPoint || BabylonVector3.ZeroReadOnly
                             const facet = (2 * Math.floor(pickInfo.faceId / 2))
-                            input.onPointerMove(pickInfo.pickedMesh, facet)
+                            input.onPointerMove(x, y, z, facet, pickInfo.pickedMesh)
                         }
                         moveTimer = performance.now()
                     }
                 }
             }
             if (typeof (input.onPointerSelect) === 'function') {
-                scene.onPointerPick = (pointer, pick) => {
-                    console.log('pointer', pointer)
-                    if (pick.hit && pick.pickedMesh) {
+                scene.onPointerPick = ({ button, pointerType, pointerId }, pick) => {
+                    const { x, y, z } = pick.pickedPoint || BabylonVector3.ZeroReadOnly
+                    if (pick.hit) {
+                        if (pointerType === "xr") {
+                            const controller = this.xrHelper.pointerSelection.getXRControllerByPointerId(pointerId)
+                            if (controller?.inputSource?.handedness === "left") {
+                                if (controller.inputSource.profiles.toString().indexOf('hand') > -1) {
+                                    //teleport on left hand pointer selection
+                                    this.teleport(x, z)
+                                    return;
+                                }
+                            }
+                        }
                         const facet = (2 * Math.floor(pick.faceId / 2))
-                        input.onPointerSelect(pick.pickedMesh, facet, pointer.button)
+                        input.onPointerSelect(x, y, z, facet)
                     }
                 }
             }
-        })
-        this.queries.pointer.removed.forEach((entity: EcsyEntity) => {
-            const input = entity.getComponent(PointerInput)!
-            const scene = this.getBabylonScene()
-            scene.onPointerObservable.removeCallback(input.inputHandler)
         })
     }
 
     private async createXRHelper(scene: BabylonScene) {
         if (!this.xrHelper) {
-            //const isARSupported = await (navigator as any).xr?.isSessionSupported("immersive-ar")
             this.xrHelper = await WebXRDefaultExperience.CreateAsync(scene, {
-                //optionalFeatures: [
-                //    WebXRFeatureName.POINTER_SELECTION,
-                //    WebXRFeatureName.TELEPORTATION,
-                //    WebXRFeatureName.BACKGROUND_REMOVER,
-                //    WebXRFeatureName.PLANE_DETECTION
-                //],
-                //inputOptions: {
-                //    doNotLoadControllerMeshes: true
-                //},
-                //uiOptions: {
-                //    sessionMode: isARSupported ? "immersive-ar" : "immersive-vr",
-                //    referenceSpaceType: isARSupported ? "unbounded" : "local-floor"
-                //}
+                floorMeshes: [scene.getMeshByName("Ground")!]
             })
             this.xrHelper.pointerSelection = this.xrHelper.baseExperience.featuresManager.enableFeature(
                 WebXRControllerPointerSelection,
