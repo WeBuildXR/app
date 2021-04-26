@@ -1,8 +1,5 @@
 import { Component as EcsyComponent, TagComponent as EcsyTagComponent, Types as EcsyTypes } from "ecsy";
 
-export class SelectedBlock extends EcsyTagComponent {}
-export class PreviewBlock extends EcsyTagComponent {}
-
 export class Block extends EcsyComponent<Block> {
     voxelX: number
     voxelY: number

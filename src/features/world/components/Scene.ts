@@ -11,3 +11,11 @@ export class Scene extends EcsyComponent<Scene> implements BabylonComponent<Baby
 Scene.schema = {
     options: { type: EcsyTypes.Ref }
 }
+
+export class Music extends EcsyComponent<Music> {
+    url: string
+}
+
+Music.schema = {
+    url: { type: EcsyTypes.String }
+}

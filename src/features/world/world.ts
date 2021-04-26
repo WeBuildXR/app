@@ -67,12 +67,14 @@ export class world extends EcsyWorld {
                 }
             }
         }
-        this.registerSystem(system, worldProperties)
+        this.registerSystem(system, {
+            priority: this.getSystems().length,
+            ...worldProperties
+        })
         return this
     }
-
 }
 
 function isNotComponentType(componentType: any): componentType is EcsyNotComponent<any> {
-    return componentType.type === "not"
+    return componentType.operator === "not"
 }

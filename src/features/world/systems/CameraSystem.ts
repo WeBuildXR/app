@@ -30,8 +30,8 @@ export class CameraSystem extends EcsySystem implements WorldScene {
         this.queries.cameras.added.forEach((entity: EcsyEntity) => {
             const camera = entity.getMutableComponent(Camera)! as BabylonComponent<BabylonCamera>
             const scene = this.getBabylonScene()
-            const desktopCamera = new UniversalCamera("", BabylonVector3.Zero(), scene)
-            desktopCamera.attachControl()
+            const desktopCamera = new UniversalCamera("UniversalCamera", BabylonVector3.Zero(), scene)
+            desktopCamera.attachControl(false)
             desktopCamera.ellipsoid = new BabylonVector3(2, 2, 2)
             desktopCamera.checkCollisions = true
             camera.babylonComponent = desktopCamera
