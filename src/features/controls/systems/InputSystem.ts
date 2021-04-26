@@ -275,7 +275,7 @@ export class InputSystem extends EcsySystem implements WorldScene {
             if (typeof (input.onPointerSelect) === 'function') {
                 scene.onPointerPick = ({ button, pointerType, pointerId }, pick) => {
                     const { x, y, z } = pick.pickedPoint || BabylonVector3.ZeroReadOnly
-                    if (pick.hit) {
+                    if (pick.hit && !scene.isPointerCaptured()) {
                         if (pointerType === "xr") {
                             const controller = this.xrHelper.pointerSelection.getXRControllerByPointerId(pointerId)
                             if (controller?.inputSource?.handedness === "left") {

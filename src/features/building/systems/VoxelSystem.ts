@@ -1,22 +1,18 @@
-import { PointerDragBehavior } from "@babylonjs/core/Behaviors/Meshes/pointerDragBehavior"
-import { SixDofDragBehavior } from "@babylonjs/core/Behaviors/Meshes/sixDofDragBehavior"
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh as BabylonMesh } from "@babylonjs/core/Meshes/mesh";
-import { Color3 } from "@babylonjs/core/Maths/math.color"
-import { Entity as EcsyEntity, System as EcsySystem } from "ecsy"
-import { Mesh, MeshTypes } from "../../world/components/Mesh"
-import { Transform } from "../../world/components/Transform"
-import { AddBlock, Block, SelectedBlock } from "../components/Block"
-import { VoxelSettings } from "../components/VoxelSettings"
-import { Behavior } from "@babylonjs/core/Behaviors/behavior";
+import { Entity as EcsyEntity, System as EcsySystem } from "ecsy";
+import { Mesh, MeshComponent, MeshTypes } from "../../world/components/Mesh";
+import { Transform } from "../../world/components/Transform";
+import { AddBlock, Block } from "../components/Block";
+import { VoxelSettings } from "../components/VoxelSettings";
 
 export class VoxelSystem extends EcsySystem {
     /** @hidden */
     static queries = {
         settings: { components: [VoxelSettings], listen: { added: true } },
-        create: { components: [AddBlock], listen: { added: true } },
-        select: { components: [SelectedBlock], listen: { added: true, removed: true } },
-        move: { components: [Block, Transform], listen: { changed: [Transform] } },
-        models: { components: [Mesh], listen: { removed: true } },
+        block: { components: [AddBlock], listen: { added: true } },
+        move: { components: [MeshComponent, Block, Transform], listen: { changed: [Transform] } },
+        models: { components: [MeshComponent, Block], listen: { removed: true } },
     }
     /** @hidden */
     queries: any
@@ -39,37 +35,6 @@ export class VoxelSystem extends EcsySystem {
             for (var add of data) {
                 this.world.createEntity().addComponent(AddBlock, add)
             }
-        }
-    }
-
-    public isDraggingBlock() {
-        if (this.draggingBlock) {
-            const mesh = this.draggingBlock.getComponent(Mesh)
-            if (mesh) {
-                const block = this.draggingBlock.getMutableComponent(Block)!
-                const { x, y, z } = mesh.babylonComponent.position
-                let { voxelX, voxelY, voxelZ } = this.normalizeCoordinates(x, y, z)
-                return (block.voxelX != voxelX || block.voxelY != voxelY || block.voxelZ != voxelZ)
-            }
-        }
-        return false
-    }
-
-    public getSelectedBlock() {
-        return this.selectedBlock
-    }
-
-    public clearSelection() {
-        if (this.selectedBlock && !this.draggingBlock) {
-            this.selectedBlock.removeComponent(SelectedBlock, true)
-            this.selectedBlock = undefined
-        }
-    }
-
-    public removeSelectedBlock() {
-        if (this.selectedBlock && !this.draggingBlock) {
-            this.selectedBlock.removeComponent(Block)
-            this.selectedBlock = undefined
         }
     }
 
@@ -96,37 +61,6 @@ export class VoxelSystem extends EcsySystem {
     private maxHeight: number = 10
     private maxDepth: number = 10
     private blocks: any = {}
-    private selectedBlock?: EcsyEntity
-    private draggingBlock?: EcsyEntity
-
-    private dragBehavior: Behavior<BabylonMesh> & { onDragStartObservable: any; onDragEndObservable: any }
-
-    init() {
-        if (navigator.platform !== "Win32") {
-            const behavior = new SixDofDragBehavior()
-            behavior.rotateDraggedObject = false
-            this.dragBehavior = behavior
-        } else {
-            this.dragBehavior = new PointerDragBehavior()
-        }
-        this.dragBehavior.onDragStartObservable.add(() => {
-            this.draggingBlock = this.selectedBlock
-        })
-        this.dragBehavior.onDragEndObservable.add(() => {
-            if (this.draggingBlock) {
-                const mesh = this.draggingBlock.getComponent(Mesh)
-                if (mesh) {
-                    const transform = this.draggingBlock.getMutableComponent(Transform)!
-                    transform.position = {
-                        x: mesh.babylonComponent.position.x,
-                        y: mesh.babylonComponent.position.y,
-                        z: mesh.babylonComponent.position.z
-                    }
-                }
-                this.draggingBlock = undefined
-            }
-        })
-    }
 
     /** @hidden */
     execute() {
@@ -138,8 +72,7 @@ export class VoxelSystem extends EcsySystem {
         })
 
         //Adding Blocks
-        this.queries.create.added.forEach((entity: EcsyEntity) => {
-            this.clearSelection()
+        this.queries.block.added.forEach((entity: EcsyEntity) => {
             const add = entity.getComponent(AddBlock)!
             let { x, y, z } = add
             const block = this.addNewBlock(x, y, z, add.facetAddDirection!)
@@ -201,34 +134,12 @@ export class VoxelSystem extends EcsySystem {
                 transform.position.y = block.voxelY
                 transform.position.z = block.voxelZ
             }
-            //TODO: AddBlock is only used once, but is kept around for saving
-            //entity.removeComponent(AddBlock, true)
-        })
-
-        //Selecting Blocks
-        this.queries.select.added.forEach((entity: EcsyEntity) => {
-            this.clearSelection()
-            const mesh = entity.getComponent(Mesh)!
-            if (mesh.babylonComponent) {
-                mesh.babylonComponent.showSubMeshesBoundingBox = true
-                mesh.babylonComponent.addBehavior(this.dragBehavior)
-                this.selectedBlock = entity
-            }
-        })
-        this.queries.select.removed.forEach((entity: EcsyEntity) => {
-            const mesh = entity.getComponent(Mesh)!
-            if (mesh.babylonComponent) {
-                mesh.babylonComponent.showSubMeshesBoundingBox = false
-                mesh.babylonComponent.removeBehavior(this.dragBehavior)
-            }
-            //TODO: fix bug where selectedBlock becomes null which makes 2 simultaneous selections possible
-            //this.selectedBlock = undefined
         })
 
         //Moving Blocks
         this.queries.move.changed.forEach((entity: EcsyEntity) => {
             const block = entity.getMutableComponent(Block)!
-            const mesh = entity.getMutableComponent(Mesh)!
+            const mesh = entity.getComponent(MeshComponent)!
             const transform = entity.getMutableComponent(Transform)!
             let { x, y, z } = transform.position
             const newPosition = this.clipBlockPosition(x, y, z)
@@ -253,7 +164,6 @@ export class VoxelSystem extends EcsySystem {
 
         //Changing / Removing Blocks
         this.queries.models.removed.forEach((entity: EcsyEntity) => {
-            this.clearSelection()
             const block = entity.getComponent(Block)!
             const old = this.getBlockName(block.voxelX, block.voxelY, block.voxelZ)
             delete this.blocks[old]

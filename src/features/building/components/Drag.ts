@@ -1,5 +1,7 @@
 import { Component as EcsyComponent, TagComponent as EcsyTagComponent, Types as EcsyTypes } from "ecsy";
 
+export class Dragging extends EcsyTagComponent { }
+
 export class Drag extends EcsyComponent<Drag> {
     showGizmos: boolean
     allowScaling: boolean

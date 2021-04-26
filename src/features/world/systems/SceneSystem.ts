@@ -1,28 +1,30 @@
+import { Sound } from "@babylonjs/core/Audio/sound"
 import { Engine as BabylonEngine } from "@babylonjs/core/Engines/engine"
 import { EngineOptions as BabylonEngineOptions } from "@babylonjs/core/Engines/thinEngine"
 import { GlowLayer } from "@babylonjs/core/Layers/glowLayer"
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight"
-import { Matrix, Vector3 as BabylonVector3 } from "@babylonjs/core/Maths/math"
+import { Color4, Matrix, Vector3 as BabylonVector3 } from "@babylonjs/core/Maths/math"
 import { AssetsManager as BabylonAssetsManager } from "@babylonjs/core/Misc/assetsManager"
 import { Observable } from "@babylonjs/core/Misc/observable"
 import { Scene as BabylonScene } from "@babylonjs/core/scene"
 import { Entity as EcsyEntity, System as EcsySystem } from "ecsy"
 import { disposeComponent } from "../common/babylonUtils"
 import { BabylonComponent } from "../components/BabylonComponent"
-import { Scene } from "../components/Scene"
+import { Music, Scene } from "../components/Scene"
 
 export class SceneSystem extends EcsySystem {
 
   /** @hidden */
   static queries = {
     scene: { components: [Scene], listen: { added: true, removed: true } },
+    sound: { components: [Music], listen: { added: true } },
   }
   /** @hidden */
   queries: any
 
   public getPickedPoint() {
     const scene = this.activeScene
-    console.log('createPickingRay',scene.pointerX, scene.pointerY)
+    console.log('createPickingRay', scene.pointerX, scene.pointerY)
     const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), scene.activeCamera)
     const hit = scene.pickWithRay(ray)
     return hit?.pickedPoint
@@ -56,6 +58,8 @@ export class SceneSystem extends EcsySystem {
 
       new HemisphericLight("", new BabylonVector3(0, 1, 0), this._activeScene)
 
+      scene.babylonComponent.clearColor = new Color4(0, 0, 0, 1);
+
       var gl = new GlowLayer("glow", scene.babylonComponent, {
         mainTextureSamples: 4,
         blurKernelSize: 15
@@ -69,6 +73,14 @@ export class SceneSystem extends EcsySystem {
     this.queries.scene.removed.forEach((entity: EcsyEntity) => {
       let scene = entity.getComponent(Scene)!
       disposeComponent(scene)
+    })
+
+    this.queries.sound.added.forEach((entity: EcsyEntity) => {
+      let music = entity.getComponent(Music)!
+      const sound = new Sound("Music", music.url, this.activeScene, undefined, {
+        autoplay: true,
+        loop: true
+      })
     })
   }
 

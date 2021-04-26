@@ -1,6 +1,4 @@
-import { ActionManager } from "@babylonjs/core/Actions/actionManager"
-import { ExecuteCodeAction } from "@babylonjs/core/Actions/directActions"
-import { ISceneLoaderPlugin, SceneLoader as BabylonSceneLoader, SceneLoader } from "@babylonjs/core/Loading/sceneLoader"
+import { SceneLoader as BabylonSceneLoader } from "@babylonjs/core/Loading/sceneLoader"
 import { StandardMaterial as BabylonStandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { CubeTexture as BabylonCubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture"
 import { Texture as BabylonTexture } from "@babylonjs/core/Materials/Textures/texture"
@@ -9,23 +7,18 @@ import { AbstractMesh as BabylonMesh } from "@babylonjs/core/Meshes/abstractMesh
 import { MeshBuilder as BabylonMeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { AssetsManager as BabylonAssetsManager } from "@babylonjs/core/Misc/assetsManager"
 import { Scene as BabylonScene } from "@babylonjs/core/scene"
-import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture"
-import { Control } from "@babylonjs/gui/2D/controls/control"
-import { Rectangle } from "@babylonjs/gui/2D/controls/rectangle"
-import { TextBlock } from "@babylonjs/gui/2D/controls/textBlock"
 import { GridMaterial } from "@babylonjs/materials/grid/gridMaterial"
 import { Entity, System } from "ecsy"
-import { disposeComponent, hexToColor3, updateTransform } from "../common/babylonUtils"
+import { disposeComponent, hexToColor3 } from "../common/babylonUtils"
 import { BabylonComponent } from "../components/BabylonComponent"
-import { MaterialColorAttributes, Mesh, MeshTypes, TextureAttributes } from "../components/Mesh"
-import { Transform } from "../components/Transform"
+import { MaterialColorAttributes, Mesh, MeshComponent, MeshTypes, TextureAttributes } from "../components/Mesh"
 import { SceneSystem } from "./SceneSystem"
 
 export class MeshSystem extends System {
     /** @hidden */
     static queries = {
         meshes: { components: [Mesh], listen: { added: true, removed: true } },
-        materials: { components: [Mesh], listen: { changed: true } },
+        materials: { components: [Mesh, MeshComponent], listen: { changed: true } },
     }
 
     /** @hidden */
@@ -35,45 +28,41 @@ export class MeshSystem extends System {
 
     /** @hidden */
     execute() {
-        this.queries.meshes.added.forEach(async (entity: Entity) => {
-            const mesh = entity.getMutableComponent(Mesh)!
+        this.queries.meshes.added.forEach((entity: Entity) => {
             const sceneSystem = this.world.getSystem(SceneSystem)
             const assetManager = sceneSystem.getAssetManager()
-            await this.createMesh(mesh, sceneSystem.activeScene, assetManager)
-            //mesh.babylonComponent.onAfterWorldMatrixUpdateObservable.add((eventData)=>{
-            //    //console.log('onAfterWorldMatrixUpdateObservable', eventData.position)
-            //    const transform = entity.getMutableComponent(Transform)!
-            //    transform.position = eventData.position
-            //})d
-            updateTransform(entity, mesh)
+            this.createMesh(entity, sceneSystem.activeScene, assetManager)
         })
 
-        this.queries.materials.changed.forEach(async (entity: Entity) => {
-            const mesh = entity.getMutableComponent(Mesh)!
-            if (mesh.babylonComponent) {
-                const sceneSystem = this.world.getSystem(SceneSystem)
-                const assetManager = sceneSystem.getAssetManager()
-                await this.applyMaterial(mesh, sceneSystem.activeScene, assetManager)
-            }
+        this.queries.materials.changed.forEach((entity: Entity) => {
+            const mesh = entity.getComponent(Mesh)!
+            const meshComponent = entity.getMutableComponent(MeshComponent)!
+            const sceneSystem = this.world.getSystem(SceneSystem)
+            const assetManager = sceneSystem.getAssetManager()
+            this.applyMaterial(meshComponent.babylonComponent, mesh, sceneSystem.activeScene, assetManager)
         })
 
         this.queries.meshes.removed.forEach((entity: Entity) => {
-            const mesh = entity.getRemovedComponent(Mesh) as BabylonComponent<BabylonMesh>
+            const mesh = entity.getMutableComponent(MeshComponent)! as BabylonComponent<BabylonMesh>
             disposeComponent(mesh)
         })
     }
 
-    private async createMesh(mesh: Mesh, scene: BabylonScene, assetManager: BabylonAssetsManager) {
+    private async createMesh(entity: Entity, scene: BabylonScene, assetManager: BabylonAssetsManager) {
+        const mesh = entity.getComponent(Mesh)!
         const options = mesh.options || {}
         if (mesh.type == MeshTypes.Box) {
-            mesh.babylonComponent = BabylonMeshBuilder.CreateBox("Box", options, scene)
-            mesh.babylonComponent.checkCollisions = true
-            mesh.babylonComponent.metadata = mesh.metadata
-            await this.applyMaterial(mesh, scene, assetManager)
+            const box = BabylonMeshBuilder.CreateBox("Box", options, scene)
+            box.checkCollisions = true
+            box.metadata = mesh.metadata
+            await this.applyMaterial(box, mesh, scene, assetManager)
+            entity.addComponent(MeshComponent, {
+                babylonComponent: box
+            })
         } else if (mesh.type == MeshTypes.Ground) {
             const halfWidth = options.width! / 2
             const halfHeight = options.width! / 2
-            mesh.babylonComponent = BabylonMeshBuilder.CreateTiledGround("Ground", {
+            const ground = BabylonMeshBuilder.CreateTiledGround("Ground", {
                 xmin: -halfWidth,
                 zmin: -halfHeight,
                 xmax: halfWidth,
@@ -83,40 +72,52 @@ export class MeshSystem extends System {
                     h: options.height!
                 }
             }, scene)
-            mesh.babylonComponent.checkCollisions = true
-            await this.applyMaterial(mesh, scene, assetManager)
+            ground.checkCollisions = true
+            await this.applyMaterial(ground, mesh, scene, assetManager)
+            entity.addComponent(MeshComponent, {
+                babylonComponent: ground
+            })
         } else if (mesh.type == MeshTypes.Sky) {
-            mesh.babylonComponent = BabylonMeshBuilder.CreateBox("Sky", options, scene)
+            const skybox = BabylonMeshBuilder.CreateBox("Sky", options, scene)
             var skyboxMaterial = new BabylonStandardMaterial("skyBox", scene)
             skyboxMaterial.backFaceCulling = false
             skyboxMaterial.reflectionTexture = new BabylonCubeTexture(mesh.url!, scene)
             skyboxMaterial.reflectionTexture.coordinatesMode = BabylonTexture.SKYBOX_MODE
             skyboxMaterial.diffuseColor = new BabylonColor3(0, 0, 0)
             skyboxMaterial.specularColor = new BabylonColor3(0, 0, 0)
-            mesh.babylonComponent.material = skyboxMaterial
+            skybox.material = skyboxMaterial
+            entity.addComponent(MeshComponent, {
+                babylonComponent: skybox
+            })
         } else if (mesh.type == MeshTypes.Plane) {
-            mesh.babylonComponent = BabylonMeshBuilder.CreatePlane("", options, scene)
-            mesh.babylonComponent.checkCollisions = true
-            mesh.babylonComponent.isPickable = false
-            await this.applyMaterial(mesh, scene, assetManager)
+            const plane = BabylonMeshBuilder.CreatePlane("", options, scene)
+            plane.checkCollisions = true
+            plane.isPickable = false
+            await this.applyMaterial(plane, mesh, scene, assetManager)
+            entity.addComponent(MeshComponent, {
+                babylonComponent: plane
+            })
         } else if (mesh.type == MeshTypes.Model) {
-            mesh.babylonComponent = await this.loadMesh(mesh.url!, assetManager)
-            mesh.babylonComponent.checkCollisions = true
-            mesh.babylonComponent.metadata = mesh.metadata
-            await this.applyMaterial(mesh, scene, assetManager)
+            const babylonMesh = await this.loadMesh(mesh.url!, assetManager)
+            babylonMesh.checkCollisions = true
+            babylonMesh.metadata = mesh.metadata
+            await this.applyMaterial(babylonMesh, mesh, scene, assetManager)
+            entity.addComponent(MeshComponent, {
+                babylonComponent: babylonMesh
+            })
         } else {
             throw new Error(`Unsupported mesh type: ${mesh.type}`)
         }
     }
 
-    private async applyMaterial(mesh: Mesh, scene: BabylonScene, assetManager: BabylonAssetsManager) {
+    private async applyMaterial(babylonMesh: BabylonMesh, mesh: Mesh, scene: BabylonScene, assetManager: BabylonAssetsManager) {
         if (mesh.material) {
             if (mesh.material.useGridMaterial) {
                 const gridMaterial = new GridMaterial("GridMaterial", scene)
                 if (mesh.material.color?.emissive) {
                     gridMaterial.lineColor = BabylonColor3.FromHexString(mesh.material.color?.emissive)
                 }
-                mesh.babylonComponent.material = gridMaterial
+                babylonMesh.material = gridMaterial
             } else {
                 const material = this.createMaterial(mesh.material.id, scene)
                 if (mesh.material.alpha) {
@@ -166,7 +167,7 @@ export class MeshSystem extends System {
                         this.setTextureAttributes(material.refractionTexture as BabylonTexture, mesh.material.texture.refraction)
                     }
                 }
-                mesh.babylonComponent.material = material
+                babylonMesh.material = material
             }
         }
     }
@@ -182,8 +183,6 @@ export class MeshSystem extends System {
             return material
         }
     }
-
-    static meshData: any[] = []
 
     private async loadMesh(url: string, assetManager: BabylonAssetsManager): Promise<BabylonMesh> {
         return new Promise((resolve, reject) => {

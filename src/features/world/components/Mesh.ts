@@ -1,5 +1,5 @@
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { AbstractMesh as BabylonMesh } from "@babylonjs/core/Meshes/abstractMesh"
+import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Component as EcsyComponent, Types as EcsyTypes } from "ecsy";
 import { BabylonComponent } from "./BabylonComponent"
 
@@ -11,8 +11,15 @@ export enum MeshTypes {
     Model = "Model"
 }
 
-export class Mesh extends EcsyComponent<Mesh> implements BabylonComponent<BabylonMesh> {
-    babylonComponent: BabylonMesh
+export class MeshComponent extends EcsyComponent<MeshComponent> implements BabylonComponent<AbstractMesh> {
+    babylonComponent: AbstractMesh
+}
+
+MeshComponent.schema = {
+    babylonComponent: { type: EcsyTypes.Ref }
+}
+
+export class Mesh extends EcsyComponent<Mesh> {
     /** @default "Box" */
     type?: MeshTypes = MeshTypes.Box
     url?: string

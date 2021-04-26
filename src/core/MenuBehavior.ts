@@ -2,6 +2,9 @@ import { Behavior } from "@babylonjs/core/Behaviors/behavior"
 import { AttachToBoxBehavior } from "@babylonjs/core/Behaviors/Meshes/attachToBoxBehavior"
 import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode"
+import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture"
+import { Control } from "@babylonjs/gui/2D/controls/control"
+import { TextBlock } from "@babylonjs/gui/2D/controls/textBlock"
 import { Container3D } from "@babylonjs/gui/3D/controls/container3D"
 import { HolographicButton } from "@babylonjs/gui/3D/controls/holographicButton"
 import { PlanePanel } from "@babylonjs/gui/3D/controls/planePanel"
@@ -21,7 +24,7 @@ export class MenuBehavior implements Behavior<Mesh> {
     private target: Mesh
     private behavior: AttachToBoxBehavior
 
-    constructor(private buttons: MenuButton[]) { }
+    constructor(private buttons: MenuButton[], private title?: string) { }
 
     init() { }
 
@@ -36,6 +39,12 @@ export class MenuBehavior implements Behavior<Mesh> {
             this.behavior = new AttachToBoxBehavior(appBar)
             target.addBehavior(this.behavior)
             toolbar.margin = 0
+
+            if (this.title) {
+                var appBarTitle = new Mesh("MenuTitle", scene, target)
+                var meshUI = AdvancedDynamicTexture.CreateForMesh(appBarTitle, undefined, undefined, false)
+                meshUI.addControl(createTextBlock(this.title))
+            }
 
             if (this.buttons.length < 5) {
                 appBar.scaling.scaleInPlace(0.2)
@@ -57,7 +66,7 @@ export class MenuBehavior implements Behavior<Mesh> {
                 }
                 button.onPointerClickObservable.add(action)
                 toolbar.addControl(button)
-                button.tooltipText = imageUrl!
+                button.tooltipText = this.title || ""
             }
             toolbar.blockLayout = false;
 
@@ -80,4 +89,14 @@ export class MenuBehavior implements Behavior<Mesh> {
             this.manager.removeControl(this.panel)
         }
     }
+}
+
+function createTextBlock(text: string, color: string = "white") {
+    var textBlock = new TextBlock()
+    textBlock.text = text
+    textBlock.color = color
+    textBlock.fontSize = 18
+    textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT
+    textBlock.height = "20px"
+    return textBlock
 }
