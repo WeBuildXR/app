@@ -1,6 +1,7 @@
 import { Camera } from "@babylonjs/core/Cameras"
 import { RayHelper } from "@babylonjs/core/Debug/rayHelper"
 import { KeyboardEventTypes, KeyboardInfo } from "@babylonjs/core/Events/keyboardEvents"
+import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents"
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
@@ -14,7 +15,6 @@ import "@babylonjs/core/XR/webXRDefaultExperience"
 import { WebXRDefaultExperience } from "@babylonjs/core/XR/webXRDefaultExperience"
 import { WebXRFeatureName } from "@babylonjs/core/XR/webXRFeaturesManager"
 import { Entity as EcsyEntity, System as EcsySystem } from "ecsy"
-import controllerModel from "../../../../assets/models/webuild-controller-small.glb"
 import { WorldLog, WorldScene } from "../../../core/WorldProperties"
 import { ControllerInput } from "../components/ControllerInput"
 import { HandInput } from "../components/HandInput"
@@ -273,9 +273,27 @@ export class InputSystem extends EcsySystem implements WorldScene {
                 }
             }
             if (typeof (input.onPointerSelect) === 'function') {
+                let isPointerDown = false, isPointerMoving = false
+                scene.onPrePointerObservable.add((pointerInfo) => {
+                    if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
+                        isPointerDown = true
+                    }
+                    else if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+                        if (isPointerDown && !isPointerMoving) {
+                            isPointerMoving = true
+                        }
+                    }
+                })
+                scene.onPointerUp = (pointerEvent) => {
+                    if (isPointerDown) {
+                        isPointerDown = false
+                        isPointerMoving = false
+                    }
+                }
                 scene.onPointerPick = ({ button, pointerType, pointerId }, pick) => {
                     const { x, y, z } = pick.pickedPoint || BabylonVector3.ZeroReadOnly
-                    if (pick.hit && !scene.isPointerCaptured()) {
+                    if (pick.hit && !scene.isPointerCaptured() && !isPointerMoving) {
+                        console.log('onPointerPick')
                         if (pointerType === "xr") {
                             const controller = this.xrHelper.pointerSelection.getXRControllerByPointerId(pointerId)
                             if (controller?.inputSource?.handedness === "left") {

@@ -38,7 +38,8 @@ const settings: any = {
   selectedTexture: textures[0].url,
   selectedIFC: ifc[0],
   selectedModel: "",
-  selectedGroundTexture: ""
+  selectedGroundTexture: "",
+  enableSound: true
 }
 
 const ifcLoader = new IfcLoader()
@@ -51,10 +52,6 @@ const game = world.instance()
 game.start(canvas, [InputSystem, MenuSystem, VoxelSystem, DragSystem, SelectionSystem, ShareSystem])
 
 game.createScene()
-
-game.createEntity().addComponent(Music, {
-  url: "./audio/tron.mp3"
-})
 
 const camera = game.createEntity().addComponent(Camera);
 camera.getMutableComponent(Transform)!.position.y = 3.5
@@ -80,7 +77,7 @@ const leftWall = addWall(-(settings.width / 2), 0, 0, 90)
 const rightWall = addWall((settings.width / 2), 0, 0, -90)
 addCeiling()
 createTextureMenu(leftWall, "wall", "Select an image for the texture of your model")
-createTextureMenu(backWall, "floor", "Select an image for the floor of your world")
+createTextureMenu(backWall, "ground", "Select an image for the floor of your world")
 createTextureMenu(rightWall, "block", "Select a block and place in the world")
 createModelMenu(frontWall)
 
@@ -105,6 +102,10 @@ logo.getMutableComponent(Transform)!.position.y = 22
 logo.getMutableComponent(Transform)!.position.z = (settings.height / 2) - 1
 
 loadLocalSettings()
+
+const music = game.createEntity()
+toggleSound()
+
 game.createEntity().addComponent(VoxelSettings, settings)
 
 game.createEntity().addComponent(ControllerInput)
@@ -174,11 +175,44 @@ function createModelMenu(entity: Entity) {
         settings.selectedModel = model.url
         saveLocalSettings()
       }
-    })))
+    }))).concat([
+      {
+        text: "Load World",
+        action: () => {
+          const voxelSystem = game.getSystem(VoxelSystem)
+          voxelSystem.load()
+        }
+      },
+      {
+        text: "Toggle Sound",
+        action: () => {
+          settings.enableSound = !settings.enableSound
+          toggleSound()
+          saveLocalSettings()
+        }
+      },
+      {
+        text: "Save World",
+        action: () => {
+          const voxelSystem = game.getSystem(VoxelSystem)
+          voxelSystem.save()
+        }
+      }
+    ] as any)
   })
 }
 
-function createTextureMenu(entity: Entity, group: "wall" | "ground" | "floor" | "block", title: string) {
+function toggleSound() {
+  if (settings.enableSound) {
+    music.addComponent(Music, {
+      url: "./audio/tron.mp3"
+    })
+  } else if (music.hasComponent(Music)) {
+    music.removeComponent(Music)
+  }
+}
+
+function createTextureMenu(entity: Entity, group: "wall" | "ground" | "block", title: string) {
   entity.addComponent(Menu, {
     title,
     items: textures.filter(({ category }) => category === group).map(({ url }) => ({
@@ -190,7 +224,7 @@ function createTextureMenu(entity: Entity, group: "wall" | "ground" | "floor" | 
           ifcLoader.MaterialTexture = url
           saveLocalSettings()
         }
-        else if (group === "ground" || group === "floor") {
+        else if (group === "ground") {
           const mesh = ground.getMutableComponent(Mesh)!
           console.log('ground', url)
           mesh.material = {
@@ -208,7 +242,19 @@ function createTextureMenu(entity: Entity, group: "wall" | "ground" | "floor" | 
           saveLocalSettings()
         }
       }
-    }))
+    })).concat(group === "ground" ? [
+      {
+        text: "No Ground Texture",
+        action: () => {
+          const mesh = ground.getMutableComponent(Mesh)!
+          mesh.material =  {
+            useGridMaterial: true
+          }
+          settings.selectedGroundTexture = undefined
+          saveLocalSettings()
+        }
+      }
+    ] as any : [])
   })
 }
 
@@ -232,10 +278,8 @@ function addBlock(x: number, y: number, z: number, facetAddDirection: number) {
         type: MeshTypes.Model,
         url: settings.selectedModel
       })
-      .addComponent(Drag, {
-        allowScaling: true
-      })
       .addComponent(Select)
+      .addComponent(Drag)
     const transform = entity.getMutableComponent(Transform)!
     transform.position.x = x
     transform.position.y = y
@@ -336,7 +380,8 @@ function saveLocalSettings() {
     selectedTexture: settings.selectedTexture,
     selectedIFC: settings.selectedIFC,
     selectedModel: settings.selectedModel,
-    selectedGroundTexture: settings.selectedGroundTexture
+    selectedGroundTexture: settings.selectedGroundTexture,
+    enableSound: settings.enableSound
   }
   localStorage["WeBuildXR_1.0"] = JSON.stringify(state)
 }
@@ -350,6 +395,7 @@ function loadLocalSettings() {
     settings.selectedIFC = state.selectedIFC
     settings.selectedModel = state.selectedModel
     settings.selectedGroundTexture = state.selectedGroundTexture
+    settings.enableSound = state.enableSound
     if (state.selectedGroundTexture) {
       const mesh = ground.getMutableComponent(Mesh)!
       mesh.material = {

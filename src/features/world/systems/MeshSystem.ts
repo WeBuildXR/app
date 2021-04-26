@@ -169,6 +169,9 @@ export class MeshSystem extends System {
                 }
                 babylonMesh.material = material
             }
+        } else {
+            //for clearing the material
+            babylonMesh.material = null
         }
     }
 

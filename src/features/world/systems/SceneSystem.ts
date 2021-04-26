@@ -17,7 +17,7 @@ export class SceneSystem extends EcsySystem {
   /** @hidden */
   static queries = {
     scene: { components: [Scene], listen: { added: true, removed: true } },
-    sound: { components: [Music], listen: { added: true } },
+    sound: { components: [Music], listen: { added: true, removed: true } },
   }
   /** @hidden */
   queries: any
@@ -39,6 +39,7 @@ export class SceneSystem extends EcsySystem {
 
   /** <Scene UID, BABYLON.AssetsManager> */
   private _assetManagers: Map<String, BabylonAssetsManager> = new Map<String, BabylonAssetsManager>()
+  private sound: Sound
 
   /** Observable event when active scene is switched. */
   public onSceneSwitched: Observable<BabylonScene> = new Observable<BabylonScene>()
@@ -77,10 +78,17 @@ export class SceneSystem extends EcsySystem {
 
     this.queries.sound.added.forEach((entity: EcsyEntity) => {
       let music = entity.getComponent(Music)!
-      const sound = new Sound("Music", music.url, this.activeScene, undefined, {
+      this.sound = new Sound("Music", music.url, this.activeScene, undefined, {
         autoplay: true,
         loop: true
       })
+    })
+
+    this.queries.sound.removed.forEach((entity: EcsyEntity) => {
+      if (this.sound) {
+        this.sound.stop()
+        this.sound.dispose()
+      }
     })
   }
 

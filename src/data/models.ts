@@ -20,7 +20,6 @@ export default [
     { category: "decor", url: "./models/decor/banner_dungeon.glb", preview: "./models/preview/glb/decor/banner_dungeon.png" },
     { category: "scenery", url: "./models/scenery/detail_treeLarge.glb", preview: "./models/preview/glb/scenery/detail_treeLarge.png" },
     { category: "scenery", url: "./models/scenery/detail_rocksLarge.glb", preview: "./models/preview/glb/scenery/detail_rocksLarge.png" },
-    { category: "scenery", url: "./models/scenery/treeHigh.glb", preview: "./models/preview/glb/scenery/treeHigh.png" },
     { category: "scenery", url: "./models/scenery/rocks.glb", preview: "./models/preview/glb/scenery/rocks.png" },
     { category: "scenery", url: "./models/scenery/rockWide.glb", preview: "./models/preview/glb/scenery/rockWide.png" },
     { category: "scenery", url: "./models/scenery/rockSmall.glb", preview: "./models/preview/glb/scenery/rockSmall.png" },
@@ -28,6 +27,5 @@ export default [
     { category: "scenery", url: "./models/scenery/mushrooms.glb", preview: "./models/preview/glb/scenery/mushrooms.png" },
     { category: "scenery", url: "./models/scenery/flowers.glb", preview: "./models/preview/glb/scenery/flowers.png" },
     { category: "scenery", url: "./models/scenery/fenceCorner.glb", preview: "./models/preview/glb/scenery/fenceCorner.png" },
-    { category: "scenery", url: "./models/scenery/fence.glb", preview: "./models/preview/glb/scenery/fence.png" },
-    { category: "scenery", url: "./models/scenery/treeHighCrooked.glb", preview: "./models/preview/glb/scenery/treeHighCrooked.png" }
+    { category: "scenery", url: "./models/scenery/fence.glb", preview: "./models/preview/glb/scenery/fence.png" }
 ]
